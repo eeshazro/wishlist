@@ -1,0 +1,74 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: wishlist_postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: wishlist
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d wishlist"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  user-service:
+    build: ../apps/user-service
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://app:app@postgres:5432/wishlist
+      JWT_SECRET: "dev_super_secret_change_me"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  wishlist-service:
+    build: ../apps/wishlist-service
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgres://app:app@postgres:5432/wishlist
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  collaboration-service:
+    build: ../apps/collaboration-service
+    environment:
+      PORT: 3003
+      DATABASE_URL: postgres://app:app@postgres:5432/wishlist
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build: ../apps/api-gateway
+    environment:
+      PORT: 8080
+      JWT_SECRET: "dev_super_secret_change_me"
+      USER_SVC_URL: "http://user-service:3001"
+      WISHLIST_SVC_URL: "http://wishlist-service:3002"
+      COLLAB_SVC_URL: "http://collaboration-service:3003"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+      - wishlist-service
+      - collaboration-service
+
+  web-frontend:
+    build: ../apps/web-frontend
+    environment:
+      VITE_API_URL: "http://localhost:8080"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-gateway
+
+volumes:
+  pgdata:
