@@ -306,7 +306,8 @@ app.delete('/api/wishlists/:id/access/:userId', wrap(async (req,res)=>{
 app.post('/api/wishlists/:id/invites', wrap(async (req,res)=>{
   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
   if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
-  const data = await jpost(`${COLLAB_URL}/wishlists/${req.params.id}/invites`, {}, { headers: { 'content-type':'application/json' } });
+  const body = { access_type: (req.body?.access_type || 'view_only') };
+  const data = await jpost(`${COLLAB_URL}/wishlists/${req.params.id}/invites`, body, { headers: { 'content-type':'application/json' } });
   res.status(201).json({ ...data, inviteLink: `http://localhost:5173/invite/${data.token}` });
 }));
 
@@ -344,7 +345,7 @@ app.post('/invites/:token/accept', wrap(async (req,res)=>{
 }));
 
 app.post('/api/invites/:token/accept', wrap(async (req,res)=>{
-  const body = { role: req.body.role || 'view_only', display_name: (req.body.display_name || '').trim() || null };
+  const body = { display_name: (req.body.display_name || '').trim() || null };
   const data = await jpost(`${COLLAB_URL}/invites/${req.params.token}/accept`, body, { headers: { 'x-user-id': req.user.id, 'content-type': 'application/json' } });
   res.json(data);
 }));
@@ -390,6 +391,23 @@ app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
 
   console.log('gateway: enriched access rows', rows.map(({ user, ...r }) => ({ ...r, user_public: user?.public_name })));
   res.json(rows);
+}));
+
+
+//update collaborator roles, only the wishlist owner can do this
+app.patch('/api/wishlists/:id/access/:userId', wrap(async (req,res)=>{
+  const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
+  if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
+
+  const resp = await fetch(`${COLLAB_URL}/wishlists/${req.params.id}/access/${req.params.userId}`, {
+    method: 'PATCH',
+    headers: { 'x-owner-id': req.user.id, 'content-type': 'application/json' },
+    body: JSON.stringify({ role: req.body?.role })
+  });
+  const ct = resp.headers.get('content-type') || '';
+  const data = ct.includes('application/json') ? await resp.json() : { error: (await resp.text()) };
+  if (!resp.ok) return res.status(resp.status).json(data);
+  res.json(data);
 }));
 
 

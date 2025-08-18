@@ -365,6 +365,7 @@ app.get('/health', (req,res)=>res.json({ok:true, service:'collaboration-service'
 // Startup migration to ensure new column exists
 async function ensureMigrations() {
   await pool.query('ALTER TABLE "collab".wishlist_access ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)');
+  await pool.query('ALTER TABLE "collab".wishlist_invite ADD COLUMN IF NOT EXISTS access_type VARCHAR(20) NOT NULL DEFAULT \'view_only\'');
   console.log('[COLLAB] Migration ensured: wishlist_access.display_name exists');
 }
 
@@ -391,15 +392,39 @@ app.delete('/wishlists/:id/access/:userId', wrap(async (req,res)=>{
   res.status(204).end();
 }));
 
+
+// update roles on a wishlist
+app.patch('/wishlists/:id/access/:userId', wrap(async (req,res)=>{
+  const wid = parseInt(req.params.id,10);
+  const targetUserId = parseInt(req.params.userId,10);
+  const ownerId = parseInt(req.headers['x-owner-id']||'0',10);
+  const role = String(req.body?.role || '').trim();
+
+  const allowed = ['view_only','view_edit','comment_only'];
+  if (!ownerId) return res.status(403).json({error:'owner required'});
+  if (!allowed.includes(role)) return res.status(400).json({error:'invalid role'});
+
+  await pool.query('UPDATE "collab".wishlist_access SET role=$1 WHERE wishlist_id=$2 AND user_id=$3', [role, wid, targetUserId]);
+  const { rows } = await pool.query(
+    'SELECT wishlist_id, user_id, role, invited_by, invited_at, display_name FROM "collab".wishlist_access WHERE wishlist_id=$1 AND user_id=$2',
+    [wid, targetUserId]
+  );
+  if (!rows[0]) return res.status(404).json({error:'not found'});
+  res.json(rows[0]);
+}));
+
+
+
 // Create invite
 app.post('/wishlists/:id/invites', wrap(async (req,res)=>{
   const wid = parseInt(req.params.id,10);
   const token = nanoid(16);
   const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // +72h
+  const accessType = (req.body?.access_type || 'view_only');
 
   const { rows } = await pool.query(
-    'INSERT INTO "collab".wishlist_invite (wishlist_id, token, expires_at) VALUES ($1,$2,$3) RETURNING token, expires_at',
-    [wid, token, expiresAt]
+    'INSERT INTO "collab".wishlist_invite (wishlist_id, token, expires_at, access_type) VALUES ($1,$2,$3,$4) RETURNING token, expires_at, access_type',
+    [wid, token, expiresAt, accessType]
   );
   res.status(201).json(rows[0]);
 }));
@@ -414,13 +439,13 @@ app.get('/invites/:token', wrap(async (req,res)=>{
 // Accept invite
 app.post('/invites/:token/accept', wrap(async (req,res)=>{
   const userId = uid(req);
-  const role = req.body.role || 'view_only';
   const displayName = (req.body.display_name || '').trim() || null;
-  console.log('[COLLAB] POST /invites/:token/accept', { token: req.params.token, userId, role, displayName });
+  console.log('[COLLAB] POST /invites/:token/accept', { token: req.params.token, userId, displayName });
 
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
   const wid = rows[0].wishlist_id;
+  const role = rows[0].access_type || 'view_only';
 
   await pool.query(
     `INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by, display_name)

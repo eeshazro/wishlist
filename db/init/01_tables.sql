@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS "collab".wishlist_invite (
   id SERIAL PRIMARY KEY,
   wishlist_id INT NOT NULL,
   token VARCHAR(255) NOT NULL UNIQUE,
-  expires_at TIMESTAMP NOT NULL
+  expires_at TIMESTAMP NOT NULL,
+  access_type VARCHAR(20) NOT NULL DEFAULT 'view_only' -- view_only | view_edit | comment_only
 );
 
 CREATE TABLE IF NOT EXISTS "collab".wishlist_access (
