@@ -352,13 +352,15 @@ app.post('/api/invites/:token/accept', wrap(async (req,res)=>{
 
 
 app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
+  console.log('[GET] /api/wishlists/:id/access', { wid: req.params.id, userId: req.user?.id });
   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
   if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
 
-  // fetch raw access rows
+  // raw collab rows (may include display_name)
   const access = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
+  console.log('gateway: raw access rows', access);
 
-  // Enrich with user profiles (owner + collaborators)
+  // Enrich with user directory names/icons
   const ids = Array.from(new Set([w.owner_id, ...access.map(a => a.user_id)]));
   let users = [];
   try {
@@ -374,15 +376,20 @@ app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
     if (u && typeof u.id !== 'undefined') byId[u.id] = u;
   }
 
-  // Include owner row first, then collaborators
-  const out = [
-    { user_id: w.owner_id, role: 'owner', user: byId[w.owner_id] || { id: w.owner_id, public_name: `User ${w.owner_id}`, icon_url: null } },
+  // Include owner row first, then collaborators; compute a stable name preferring display_name
+  const rows = [
+    { user_id: w.owner_id, role: 'owner', display_name: null, user: byId[w.owner_id] || { id: w.owner_id, public_name: `User ${w.owner_id}`, icon_url: null } },
     ...access.map(a => ({
       ...a,
       user: byId[a.user_id] || { id: a.user_id, public_name: `User ${a.user_id}`, icon_url: null }
     }))
-  ];
-  res.json(out);
+  ].map(r => ({
+    ...r,
+    name: (r.display_name && String(r.display_name).trim()) || r.user?.public_name || `User ${r.user_id}`
+  }));
+
+  console.log('gateway: enriched access rows', rows.map(({ user, ...r }) => ({ ...r, user_public: user?.public_name })));
+  res.json(rows);
 }));
 
 
