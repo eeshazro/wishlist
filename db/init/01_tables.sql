@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS "collab".wishlist_access (
   role VARCHAR(20) NOT NULL, -- view_only | view_edit | comment_only
   invited_by INT,
   invited_at TIMESTAMP DEFAULT NOW(),
+  display_name VARCHAR(255), -- per-wishlist collaborator name
   PRIMARY KEY (wishlist_id, user_id)
 );
 

@@ -19,10 +19,10 @@ INSERT INTO "wishlist".wishlist_item (product_id, wishlist_id, title, priority, 
  (5, 2, 'USB-C Dock', 3, NULL, 1);
 
 -- Access: Bob edit on Office Setup, Carol comment on Birthday, Dave view-only
-INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by) VALUES
- (2, 2, 'view_edit', 1),
- (1, 3, 'comment_only', 1),
- (1, 4, 'view_only', 1);
+INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by, display_name) VALUES
+ (2, 2, 'view_edit', 1, 'Bob B.'),
+ (1, 3, 'comment_only', 1, 'Carol C.'),
+ (1, 4, 'view_only', 1, 'Dave D.');
 
 -- A pending invite for Dave to Office Setup
 INSERT INTO "collab".wishlist_invite (wishlist_id, token, expires_at) VALUES

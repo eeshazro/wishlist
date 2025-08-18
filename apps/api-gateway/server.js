@@ -257,12 +257,43 @@ app.delete('/api/wishlists/:id/items/:itemId', wrap(async (req,res)=>{
   res.status(204).end();
 }));
 
+// app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
+//   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
+//   if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
+//   const data = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
+//   res.json(data);
+// }));
+
 app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
   if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
-  const data = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
-  res.json(data);
+
+  const access = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
+
+  // Enrich with user directory names/icons
+  const ids = Array.from(new Set([w.owner_id, ...access.map(a => a.user_id)]));
+  let users = [];
+  try {
+    if (ids.length) {
+      const r = await jget(`${USER_URL}/users?ids=${ids.join(',')}`);
+      users = Array.isArray(r) ? r : (Array.isArray(r?.rows) ? r.rows : []);
+    }
+  } catch (e) {
+    console.warn('User enrichment failed in access route:', e.message);
+  }
+  const byId = {};
+  for (const u of users) if (u && typeof u.id !== 'undefined') byId[u.id] = u;
+
+  const out = [
+    { user_id: w.owner_id, role: 'owner', display_name: null, user: byId[w.owner_id] || { id: w.owner_id, public_name: `User ${w.owner_id}`, icon_url: null } },
+    ...access.map(a => ({
+      ...a,
+      user: byId[a.user_id] || { id: a.user_id, public_name: `User ${a.user_id}`, icon_url: null }
+    }))
+  ];
+  res.json(out);
 }));
+
 
 app.delete('/api/wishlists/:id/access/:userId', wrap(async (req,res)=>{
   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
@@ -284,10 +315,76 @@ app.get('/api/invites/:token', wrap(async (req,res)=>{
   res.json(data);
 }));
 
+// app.post('/api/invites/:token/accept', wrap(async (req,res)=>{
+//   const body = { role: req.body.role || 'view_only', display_name: (req.body.display_name || '').trim() || null };
+//   const data = await jpost(`${COLLAB_URL}/invites/${req.params.token}/accept`, body, { headers: { 'x-user-id': req.user.id, 'content-type': 'application/json' } });
+//   res.json(data);
+// }));
+
+
+
+app.post('/invites/:token/accept', wrap(async (req,res)=>{
+  const userId = uid(req);
+  const role = req.body.role || 'view_only';
+  const displayName = (req.body.display_name || '').trim() || null;
+
+  const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
+  if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
+  const wid = rows[0].wishlist_id;
+
+  await pool.query(
+    `INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by, display_name)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (wishlist_id, user_id)
+     DO UPDATE SET role=EXCLUDED.role, display_name=COALESCE(EXCLUDED.display_name, "collab".wishlist_access.display_name)`,
+    [wid, userId, role, userId, displayName]
+  );
+
+  res.json({ ok:true, wishlist_id: wid, role, display_name: displayName });
+}));
+
 app.post('/api/invites/:token/accept', wrap(async (req,res)=>{
-  const data = await jpost(`${COLLAB_URL}/invites/${req.params.token}/accept`, { role: req.body.role || 'view_only' }, { headers: { 'x-user-id': req.user.id, 'content-type':'application/json' } });
+  const body = { role: req.body.role || 'view_only', display_name: (req.body.display_name || '').trim() || null };
+  const data = await jpost(`${COLLAB_URL}/invites/${req.params.token}/accept`, body, { headers: { 'x-user-id': req.user.id, 'content-type': 'application/json' } });
   res.json(data);
 }));
+
+
+
+app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
+  const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
+  if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
+
+  // fetch raw access rows
+  const access = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
+
+  // Enrich with user profiles (owner + collaborators)
+  const ids = Array.from(new Set([w.owner_id, ...access.map(a => a.user_id)]));
+  let users = [];
+  try {
+    if (ids.length) {
+      const r = await jget(`${USER_URL}/users?ids=${ids.join(',')}`);
+      users = Array.isArray(r) ? r : (Array.isArray(r?.rows) ? r.rows : []);
+    }
+  } catch (e) {
+    console.warn('User enrichment failed in /api/wishlists/:id/access:', e.message);
+  }
+  const byId = {};
+  for (const u of users) {
+    if (u && typeof u.id !== 'undefined') byId[u.id] = u;
+  }
+
+  // Include owner row first, then collaborators
+  const out = [
+    { user_id: w.owner_id, role: 'owner', user: byId[w.owner_id] || { id: w.owner_id, public_name: `User ${w.owner_id}`, icon_url: null } },
+    ...access.map(a => ({
+      ...a,
+      user: byId[a.user_id] || { id: a.user_id, public_name: `User ${a.user_id}`, icon_url: null }
+    }))
+  ];
+  res.json(out);
+}));
+
 
 // register the error handler LAST
 app.use(errorHandler);
