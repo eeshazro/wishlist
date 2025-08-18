@@ -47,4 +47,39 @@ app.get('/users/:id', async (req,res)=>{
   res.json(rows[0]);
 });
 
+
+// Simple dev directory for name/icon lookups
+const devUsers = [
+  { id: 1, public_name: 'Alice', icon_url: null },
+  { id: 2, public_name: 'Bob',   icon_url: null },
+  { id: 3, public_name: 'Carol', icon_url: null },
+  { id: 4, public_name: 'Dave',  icon_url: null },
+];
+
+app.get('/users', (req, res) => {
+  const idsParam = req.query.ids;
+  if (!idsParam) return res.json(devUsers);
+  const ids = String(idsParam).split(',').map(x => parseInt(x, 10)).filter(Boolean);
+  return res.json(devUsers.filter(u => ids.includes(u.id)));
+});
+
+
+app.get('/users', async (req, res) => {
+  try {
+    const idsParam = (req.query.ids || '').trim();
+    if (!idsParam) return res.json([]);
+    const ids = idsParam.split(',').map(s => parseInt(s, 10)).filter(Boolean);
+    if (ids.length === 0) return res.json([]);
+    const { rows } = await pool.query(
+      'SELECT id, public_name, icon_url FROM "user".user WHERE id = ANY($1::int[])',
+      [ids]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('USER_SVC /users error', err);
+    res.status(500).json({ error: 'failed to fetch users' });
+  }
+});
+
+
 app.listen(PORT, ()=>console.log('user-service on', PORT));

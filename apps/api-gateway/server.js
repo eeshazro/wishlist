@@ -20,42 +20,6 @@ const COLLAB_URL = process.env.COLLAB_SVC_URL || 'http://collaboration-service:3
 
 const products = JSON.parse(fs.readFileSync(path.join(__dirname, 'products/products.json'), 'utf-8'));
 
-// Health
-app.get('/health', (req,res)=>res.json({ok:true, service:'api-gateway'}));
-
-// Async route wrapper so thrown errors go to Express instead of crashing the process
-const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-
-// Global safety nets
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED_REJECTION', err);
-});
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT_EXCEPTION', err);
-  // Do NOT process.exit() in dev; let Docker restart if it really dies.
-});
-
-// Express error handler (last middleware)
-function errorHandler(err, req, res, next) {
-  console.error('GATEWAY_ERROR', err);
-  const message = typeof err === 'string' ? err : err.message || 'Internal error';
-  res.status(502).json({ error: message });
-}
-
-
-// Auth helpers
-// function auth(req,res,next){
-//   if (req.path.startsWith('/products')) return next(); // public products
-//   if (req.path.startsWith('/auth/login')) return next();
-//   const auth = req.headers.authorization||'';
-//   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-//   if(!token) return res.status(401).json({error:'missing token'});
-//   try{
-//     const payload = jwt.verify(token, JWT_SECRET);
-//     req.user = { id: payload.sub, name: payload.name };
-//     return next();
-//   }catch(e){ return res.status(401).json({error:'invalid token'}); }
-// }
 
 function auth(req,res,next){
   if (req.path.startsWith('/products')) return next();          // public
@@ -75,6 +39,112 @@ function auth(req,res,next){
 
 app.use(auth);
 
+
+// Health
+app.get('/health', (req,res)=>res.json({ok:true, service:'api-gateway'}));
+
+// Async route wrapper so thrown errors go to Express instead of crashing the process
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Global safety nets
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED_REJECTION', err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT_EXCEPTION', err);
+  // Do NOT process.exit() in dev; let Docker restart if it really dies.
+});
+
+
+// COMMENTS — list (enrich with author info)
+app.get('/api/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
+  const comments = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/items/${req.params.itemId}/comments`);
+
+  let usersResponse = [];
+  try {
+    const ids = Array.from(new Set((comments || []).map(c => c && c.user_id).filter(Boolean)));
+    if (ids.length) {
+      const r = await jget(`${USER_URL}/users?ids=${ids.join(',')}`);
+      // normalize: r might be an array or {rows:[...]} — we only accept an array of objects
+      usersResponse = Array.isArray(r) ? r : (Array.isArray(r?.rows) ? r.rows : []);
+    }
+  } catch (e) {
+    console.warn('User enrichment failed, proceeding with minimal user objects:', e.message);
+  }
+
+  const byId = {};
+  for (const u of usersResponse) {
+    if (u && typeof u.id !== 'undefined') byId[u.id] = u;
+  }
+
+  const safeComments = (comments || []).filter(c => c && typeof c === 'object');
+
+  res.json(safeComments.map(c => ({
+    ...c,
+    user: byId[c.user_id] || { id: c.user_id, public_name: `User ${c.user_id}`, icon_url: null }
+  })));
+}));
+
+// COMMENTS — create (and return enriched)
+app.post('/api/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
+  const created = await jpost(
+    `${COLLAB_URL}/wishlists/${req.params.id}/items/${req.params.itemId}/comments`,
+    req.body,
+    { headers: { 'x-user-id': req.user.id, 'content-type': 'application/json' } }
+  );
+
+  // default to JWT claims if enrichment fails
+  let user = { id: req.user.id, public_name: req.user.name, icon_url: null };
+  try {
+    const r = await jget(`${USER_URL}/users?ids=${req.user.id}`);
+    const arr = Array.isArray(r) ? r : (Array.isArray(r?.rows) ? r.rows : []);
+    if (arr[0]) user = arr[0];
+  } catch (e) {
+    console.warn('Self enrichment failed, returning minimal user:', e.message);
+  }
+
+  res.status(201).json({ ...created, user });
+}));
+
+
+
+
+// Express error handler (last middleware)
+// function errorHandler(err, req, res, next) {
+//   console.error('GATEWAY_ERROR', err);
+//   const message = typeof err === 'string' ? err : err.message || 'Internal error';
+//   res.status(502).json({ error: message });
+// }
+function errorHandler(err, req, res, next) {
+  console.error('GATEWAY_ERROR', err);
+  const status = err.status || 502;
+  let message = err.message || 'Internal error';
+  // If the downstream sent JSON, it might be a stringified JSON; try to parse to extract {error:...}
+  try {
+    const parsed = JSON.parse(message);
+    message = parsed.error || message;
+  } catch (_) {}
+  res.status(status).json({ error: message });
+}
+
+
+
+// Auth helpers
+// function auth(req,res,next){
+//   if (req.path.startsWith('/products')) return next(); // public products
+//   if (req.path.startsWith('/auth/login')) return next();
+//   const auth = req.headers.authorization||'';
+//   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+//   if(!token) return res.status(401).json({error:'missing token'});
+//   try{
+//     const payload = jwt.verify(token, JWT_SECRET);
+//     req.user = { id: payload.sub, name: payload.name };
+//     return next();
+//   }catch(e){ return res.status(401).json({error:'invalid token'}); }
+// }
+
+
+
 // ---- Products (public, served from JSON file) ----
 app.get('/products', (req, res) => {
   res.json(products);
@@ -88,9 +158,46 @@ app.get('/products/:id', (req, res) => {
 
 
 // Proxy helpers
-async function jget(url, opts={}){ const r = await fetch(url, opts); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-async function jpost(url, body, opts={}){ const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json', ...(opts.headers||{})}, body: JSON.stringify(body)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-async function jdel(url, opts={}){ const r = await fetch(url, {method:'DELETE', headers: (opts.headers||{})}); if(!r.ok && r.status!==204) throw new Error(await r.text()); return true; }
+// async function jget(url, opts={}){ const r = await fetch(url, opts); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+// async function jpost(url, body, opts={}){ const r = await fetch(url, {method:'POST', headers:{'content-type':'application/json', ...(opts.headers||{})}, body: JSON.stringify(body)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+// async function jdel(url, opts={}){ const r = await fetch(url, {method:'DELETE', headers: (opts.headers||{})}); if(!r.ok && r.status!==204) throw new Error(await r.text()); return true; }
+
+async function jget(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jpost(url, body, opts = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jdel(url, opts = {}) {
+  const r = await fetch(url, { method: 'DELETE', headers: (opts.headers || {}) });
+  if (!r.ok && r.status !== 204) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return true;
+}
+
+
 
 app.post('/auth/login', wrap(async (req, res) => {
   const r = await fetch(`${USER_URL}/auth/login`, {
