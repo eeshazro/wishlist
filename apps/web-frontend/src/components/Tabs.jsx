@@ -1,0 +1,23 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
+export default function Tabs(){
+  const loc = useLocation();
+  const isMine = loc.pathname.startsWith('/wishlist') && !loc.pathname.startsWith('/wishlist/friends');
+  const isFriends = loc.pathname.startsWith('/wishlist/friends');
+  return (
+    <ul className="a-tabs" role="tablist">
+      <li className={`a-tab-heading ${isMine ? 'a-active' : ''}`} role="presentation">
+        <Link to="/wishlist" role="tab" aria-selected={isMine ? 'true':'false'}>
+          <div role="heading" aria-level="1">Your Lists</div>
+        </Link>
+      </li>
+      <li className={`a-tab-heading ${isFriends ? 'a-active' : ''}`} role="presentation">
+        <Link to="/wishlist/friends" role="tab" aria-selected={isFriends ? 'true':'false'}>Your Friends</Link>
+      </li>
+      <div className="a-text-right" style={{marginLeft:'auto'}}>
+        <Link className="a-link-normal" to="https://www.amazon.com/gp/help/customer/display.html?nodeId=897204" target="_blank">List help</Link>
+      </div>
+    </ul>
+  );
+}

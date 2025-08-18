@@ -118,10 +118,16 @@
   
   /* Control bar (search, sort/filter) */
   .control-bar{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 0; border-top:1px solid var(--amz-line); border-bottom:1px solid var(--amz-line);
+    display:flex;
+    justify-content: flex-end;
+    align-items:center;
+    gap: 12px;   /* add spacing instead of pushing apart */
+    padding:10px 0;
+    border-top:1px solid var(--amz-line);
+    border-bottom:1px solid var(--amz-line);
     margin:8px 0 16px;
   }
+  
   .control-bar .search{
     display:flex; align-items:center; gap:8px;
   }
@@ -204,3 +210,108 @@
 .comment .meta{ font-size:12px; color:var(--amz-muted); }
 .comment-form{ display:flex; gap:8px; margin-top:6px; }
 .comment-form .a-input-text{ flex:1; }
+
+
+
+
+/* ---------- Amazon Header (exact colors & layout) ---------- */
+/* ---------- Amazon Header (scoped + prefixed) ---------- */
+.amz-header{
+  --amz-top: #131921;
+  --amz-sub: #232f3e;
+  --amz-accent: #febd69;
+  --amz-accent-hover: #f3a847;
+  --amz-text: #ffffff;
+  --amz-muted: #d5d9d9;
+  --amz-ink: #0f1111;
+  --amz-border: #dddddd;
+
+  font-family: Arial, sans-serif;
+}
+
+/* shared layout helpers */
+.amz-header .amz-header-container{ max-width:1400px; margin:0 auto; padding:0 16px}
+.amz-header .amz-header-row{ display:flex; align-items:center; gap:12px; }
+.amz-header .amz-header-grow{ flex:1 1 auto; }
+
+/* TOP NAV */
+.amz-header .amz-header-topnav{ background:#131921;; color:var(--amz-text); }
+.amz-header .amz-header-topnav-row{ height:60px; gap:16px; background-color: #131921; }
+
+.amz-header .amz-header-left,
+.amz-header .amz-header-right{ gap:12px; }
+.amz-header .amz-header-left{ min-width:360px; }
+.amz-header .amz-header-right{ margin-left:auto; gap:16px; }
+
+.amz-header .amz-hamburger{ width:40px; height:36px; border:1px solid rgba(255,255,255,.2); border-radius:2px; background:transparent; display:grid; place-items:center; padding:0 6px; }
+.amz-header .amz-hamburger span{ display:block; width:100%; height:2px; background:var(--amz-text); margin:3px 0; }
+
+.amz-header .amz-header-logo{ display:flex; align-items:baseline; color:var(--amz-text); text-decoration:none; font-weight:700; letter-spacing:.2px; }
+.amz-header .amz-header-logo-word{ font-size:22px; text-transform:lowercase; }
+.amz-header .amz-header-logo-smile{ color:#ff9900; margin:0 2px; transform:translateY(2px); }
+.amz-header .amz-header-logo-dot,
+.amz-header .amz-header-logo-tld{ font-size:12px; opacity:.9; margin-left:1px; }
+
+.amz-header .amz-header-location{ display:flex; align-items:center; gap:6px; padding:6px 8px; }
+.amz-header .amz-header-pin svg{ width:20px; height:20px; fill:var(--amz-text); opacity:.8; }
+.amz-header .amz-header-location-text .amz-header-muted{ color:var(--amz-muted); font-size:12px; line-height:14px; }
+.amz-header .amz-header-location-text .amz-header-strong{ color:var(--amz-text); font-weight:700; font-size:13px; }
+
+/* Search */
+.amz-header .amz-header-search{ flex:1 1 680px; display:grid; grid-template-columns:60px 1fr 50px; border-radius:6px; overflow:hidden; background:#fff; height:40px; }
+.amz-header .amz-header-search-scope{ border:none; background:#f3f3f3; padding:0 10px; font-size:13px; color:#111; }
+.amz-header .amz-header-search-input{ border:none; padding:0 12px; font-size:14px; outline:none; }
+.amz-header .amz-header-search-btn{ border:none; background:var(--amz-accent); display:grid; place-items:center; }
+.amz-header .amz-header-search-btn:hover{ background:var(--amz-accent-hover); }
+.amz-header .amz-header-search-btn svg{ width:22px; height:22px; fill:#111; }
+
+/* Pills / actions on right */
+.amz-header .amz-header-pill{ color:var(--amz-text); text-decoration:none; border:1px solid rgba(255,255,255,.25); padding:6px 10px; border-radius:18px; font-size:13px; }
+.amz-header .amz-header-rufus .amz-header-dot{ display:inline-block; width:8px; height:8px; background:#f39800; border-radius:50%; margin-right:6px; }
+.amz-header .amz-header-prime{ background:#0e6fff; border-color:#0e6fff; }
+
+.amz-header .amz-header-lang{ color:var(--amz-text); text-decoration:none; font-size:13px; display:flex; align-items:center; gap:6px; }
+.amz-header .amz-header-flag{ font-size:16px; }
+
+.amz-header .amz-header-account,
+.amz-header .amz-header-returns{ color:var(--amz-text); text-decoration:none; line-height:1.1; }
+.amz-header .amz-header-account .amz-header-muted,
+.amz-header .amz-header-returns .amz-header-muted{ color:var(--amz-muted); font-size:12px; display:block; }
+.amz-header .amz-header-account .amz-header-strong,
+.amz-header .amz-header-returns .amz-header-strong{ font-weight:700; font-size:13px; }
+
+.amz-header .amz-header-cart{ position:relative; color:var(--amz-text); text-decoration:none; display:flex; align-items:center; gap:6px; }
+.amz-header .amz-header-cart svg{ width:28px; height:28px; fill:var(--amz-text); }
+.amz-header .amz-header-cart-count{ position:absolute; top:-6px; left:12px; background:#f08804; color:#111; font-weight:700; border-radius:10px; padding:0 5px; font-size:12px; }
+
+/* DARK SUBNAV */
+.amz-header .amz-header-subnav{ background:var(--amz-sub); color:var(--amz-text); }
+.amz-header .amz-header-subnav-row{ height:40px; gap:18px; }
+.amz-header .amz-header-subnav-item{ color:var(--amz-text); text-decoration:none; font-size:13px; white-space:nowrap; }
+.amz-header .amz-header-burger{ font-weight:700; margin-right:6px; }
+
+/* WHITE LIST RAIL */
+.amz-header .amz-header-tertiary{ background:#fff; border-bottom:1px solid var(--amz-border); }
+.amz-header .amz-header-tertiary-row{ height:38px; gap:18px; }
+.amz-header .amz-header-tertiary-link{ color:var(--amz-ink); text-decoration:none; font-size:13px; }
+.amz-header .amz-header-tertiary-active{ font-weight:700; position:relative; }
+.amz-header .amz-header-tertiary-active::after{
+  content:'';
+  position:absolute;
+  left:0; right:0; bottom:-11px;
+  height:3px; background:#e47911; border-radius:2px;
+}
+
+
+
+/* TOP NAV */
+.amz-header .amz-header-topnav { background: var(--amz-top); color: var(--amz-text); }
+.amz-header .amz-header-topnav-row { height: 60px; gap: 16px; }
+
+/* DARK SUBNAV */
+.amz-header .amz-header-subnav { background: var(--amz-sub); color: var(--amz-text); }
+.amz-header .amz-header-subnav-row { height: 40px; gap: 18px; }
+
+/* (OPTIONAL backwards-compat so it still works if you miss a rename) */
+.amz-header .amz-topnav { background: var(--amz-top); color: var(--amz-text); }
+.amz-header .amz-subnav { background: var(--amz-sub); color: var(--amz-text); }
