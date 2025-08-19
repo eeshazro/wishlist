@@ -33,15 +33,19 @@ export default function AddItemModal({ open, onClose, products = [], onPick }) {
     maxHeight: '85vh',
     background: '#fff',
     borderRadius: '10px',
-    padding: '16px',
-    overflow: 'auto',
+    overflow: 'hidden',
     boxShadow: '0 10px 30px rgba(0,0,0,.25)'
   };
   const header = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '12px'
+    padding: '16px',
+    background: '#f7fafa',
+    borderBottom: '1px solid var(--amz-line)'
+  };
+  const content = {
+    padding: '16px'
   };
 
   return (
@@ -52,36 +56,38 @@ export default function AddItemModal({ open, onClose, products = [], onPick }) {
           <button className="a-button" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        <input
-          className="a-input-text"
-          style={{ width: '100%', marginBottom: 12 }}
-          placeholder="Search products"
-          value={q}
-          onChange={e => setQ(e.target.value)}
-        />
+        <div style={content}>
+          <input
+            className="a-input-text"
+            style={{ width: '100%', marginBottom: 12 }}
+            placeholder="Search products"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+          />
 
-        <div className="items-grid">
-          {filtered.map(p => (
-            <div
-              key={p.id}
-              className="item-card"
-              role="button"
-              onClick={async () => {
-                try {
-                  setBusyId(p.id);
-                  await onPick?.(p);
-                } finally {
-                  setBusyId(null);
-                  onClose?.();
-                }
-              }}
-              style={{ cursor: 'pointer', opacity: busyId === p.id ? 0.6 : 1 }}
-            >
-              <img src={p.image_url} alt={p.title} />
-              <div className="item-title">{p.title}</div>
-              <div className="item-price">${p.price}</div>
-            </div>
-          ))}
+          <div className="items-grid">
+            {filtered.map(p => (
+              <div
+                key={p.id}
+                className="item-card"
+                role="button"
+                onClick={async () => {
+                  try {
+                    setBusyId(p.id);
+                    await onPick?.(p);
+                  } finally {
+                    setBusyId(null);
+                    onClose?.();
+                  }
+                }}
+                style={{ cursor: 'pointer', opacity: busyId === p.id ? 0.6 : 1 }}
+              >
+                <img src={p.image_url} alt={p.title} />
+                <div className="item-title">{p.title}</div>
+                <div className="item-price">${p.price}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

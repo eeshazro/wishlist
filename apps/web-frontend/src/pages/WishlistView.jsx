@@ -96,7 +96,11 @@ export default function WishlistView({auth}){
           className="avatar"
           title={n}
           aria-label={n}
-        >👤</div>
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+        </div>
       );
     });
 
@@ -106,23 +110,25 @@ export default function WishlistView({auth}){
     <div className="a-container">
       <div className="wl-layout">
         <LeftNav lists={leftLists} currentId={id} />
-        <div>
+        <div className='wl-right'>
           <div className="wl-header">
             <div className="wl-titlebar">
               {data.wishlist.name} <span className="badge">{data.role}</span> <span className="badge">{data.wishlist.privacy}</span>
               {(data.role === 'owner' || (collabs && collabs.length)) && (
                 <div className="row mt-8" style={{ gap: 6 }}>
-                  {avatars}
+                  <div className="avatar-stack">
+                    {avatars}
+                  </div>
                   {data.role==='owner' && (
                     <>
                       <button
-                        className="a-button a-button-small"
+                        className="circular-btn"
                         aria-label="Invite collaborators"
                         onClick={()=>setShowInvite(true)}
                         title="Invite collaborators"
                       >+</button>
                       <button
-                        className="a-button a-button-small"
+                        className="circular-btn"
                         aria-label="Manage people"
                         onClick={()=>setShowManage(true)}
                         title="Manage people"
@@ -154,6 +160,7 @@ export default function WishlistView({auth}){
                 />
               </div>
             </div>
+            <div className="control-bar-separator"></div>
             <div className="filters">
               <label>Sort by:</label>
               <select defaultValue="default">
@@ -177,6 +184,9 @@ export default function WishlistView({auth}){
                 onDelete={deleteItem}
               />
             ))}
+            <div className="end-of-list">
+              <span>End of list</span>
+            </div>
           </div>
 
           <AddItemModal

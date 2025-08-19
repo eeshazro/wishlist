@@ -109,6 +109,8 @@ export default function InviteModal({ open, onClose, auth, id }) {
   const [linkView, setLinkView] = React.useState(null);
   const [linkEdit, setLinkEdit] = React.useState(null);
   const [error, setError] = React.useState(null);
+  const [showCopiedView, setShowCopiedView] = React.useState(false);
+  const [showCopiedEdit, setShowCopiedEdit] = React.useState(false);
 
   React.useEffect(() => {
     if (open) {
@@ -117,6 +119,8 @@ export default function InviteModal({ open, onClose, auth, id }) {
       setLinkView(null);
       setLinkEdit(null);
       setError(null);
+      setShowCopiedView(false);
+      setShowCopiedEdit(false);
     }
   }, [open]);
 
@@ -137,15 +141,19 @@ export default function InviteModal({ open, onClose, auth, id }) {
     maxHeight: '85vh',
     background: '#fff',
     borderRadius: '10px',
-    padding: '16px',
-    overflow: 'auto',
+    overflow: 'hidden',
     boxShadow: '0 10px 30px rgba(0,0,0,.25)'
   };
   const header = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '12px'
+    padding: '16px',
+    background: '#f7fafa',
+    borderBottom: '1px solid var(--amz-line)'
+  };
+  const content = {
+    padding: '16px'
   };
 
   const generate = async (type) => {
@@ -169,10 +177,17 @@ export default function InviteModal({ open, onClose, auth, id }) {
     }
   };
 
-  const copy = async (link) => {
+  const copy = async (link, type) => {
     if (!link) return;
     try {
       await navigator.clipboard.writeText(link);
+      if (type === 'view_only') {
+        setShowCopiedView(true);
+        setTimeout(() => setShowCopiedView(false), 2000);
+      } else {
+        setShowCopiedEdit(true);
+        setTimeout(() => setShowCopiedEdit(false), 2000);
+      }
     } catch (_) {}
   };
 
@@ -184,45 +199,73 @@ export default function InviteModal({ open, onClose, auth, id }) {
           <button className="a-button" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        {error && <div className="a-alert mb-12">Error: {error}</div>}
+        <div style={content}>
+          {error && <div className="a-alert mb-12">Error: {error}</div>}
 
-        <div className="invite-box mt-12" style={{ gap: 16, flexDirection: 'column', alignItems: 'stretch' }}>
-          <div>
-            <div className="a-muted" style={{ marginBottom: 6 }}>Invite someone to</div>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>VIEW ONLY</div>
-            <div className="a-muted" style={{ marginBottom: 8 }}>
-              Anyone with a link can view your list without making edits
+          <div className="invite-box mt-12" style={{ gap: 16, flexDirection: 'column', alignItems: 'stretch' }}>
+            <div>
+              <div className="a-muted" style={{ marginBottom: 6 }}>Invite someone to</div>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>VIEW ONLY</div>
+              <div className="a-muted" style={{ marginBottom: 8 }}>
+                Anyone with a link can view your list without making edits
+              </div>
+              <div className="invite-box">
+                <button className="a-button a-button-primary" onClick={() => generate('view_only')} disabled={busyView}>
+                  {busyView ? 'Generating…' : (linkView ? 'Regenerate link' : 'Generate link')}
+                </button>
+                {linkView && (
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <button 
+                      className="clipboard-btn" 
+                      onClick={() => copy(linkView, 'view_only')}
+                      title="Copy to clipboard"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                    </button>
+                    <input className="a-input-text mono clipboard-input" readOnly value={linkView} />
+                    {showCopiedView && (
+                      <div className="link-copied-overlay">
+                        Link copied
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="invite-box">
-              <button className="a-button a-button-primary" onClick={() => generate('view_only')} disabled={busyView}>
-                {busyView ? 'Generating…' : (linkView ? 'Regenerate link' : 'Generate link')}
-              </button>
-              {linkView && (
-                <>
-                  <input className="a-input-text mono" readOnly value={linkView} />
-                  <button className="a-button a-button-small" onClick={() => copy(linkView)}>Copy</button>
-                </>
-              )}
-            </div>
-          </div>
 
-          <hr />
+            <hr style={{ border: 'none', height: '1px', background: 'var(--amz-line)', margin: '16px 0' }} />
 
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>VIEW AND EDIT</div>
-            <div className="a-muted" style={{ marginBottom: 8 }}>
-              Invited people can add or remove items from your list
-            </div>
-            <div className="invite-box">
-              <button className="a-button a-button-primary" onClick={() => generate('view_edit')} disabled={busyEdit}>
-                {busyEdit ? 'Generating…' : (linkEdit ? 'Regenerate link' : 'Generate link')}
-              </button>
-              {linkEdit && (
-                <>
-                  <input className="a-input-text mono" readOnly value={linkEdit} />
-                  <button className="a-button a-button-small" onClick={() => copy(linkEdit)}>Copy</button>
-                </>
-              )}
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>VIEW AND EDIT</div>
+              <div className="a-muted" style={{ marginBottom: 8 }}>
+                Invited people can add or remove items from your list
+              </div>
+              <div className="invite-box">
+                <button className="a-button a-button-primary" onClick={() => generate('view_edit')} disabled={busyEdit}>
+                  {busyEdit ? 'Generating…' : (linkEdit ? 'Regenerate link' : 'Generate link')}
+                </button>
+                {linkEdit && (
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <button 
+                      className="clipboard-btn" 
+                      onClick={() => copy(linkEdit, 'view_edit')}
+                      title="Copy to clipboard"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                    </button>
+                    <input className="a-input-text mono clipboard-input" readOnly value={linkEdit} />
+                    {showCopiedEdit && (
+                      <div className="link-copied-overlay">
+                        Link copied
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

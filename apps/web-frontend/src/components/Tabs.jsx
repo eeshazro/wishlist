@@ -28,8 +28,9 @@ import CreateListModal from './CreateListModal';
 
 export default function Tabs({auth}){
   const loc = useLocation();
-  const isMine = loc.pathname.startsWith('/wishlist') && !loc.pathname.startsWith('/wishlist/friends');
+  // Updated logic to properly detect friend wishlists
   const isFriends = loc.pathname.startsWith('/wishlist/friends');
+  const isMine = loc.pathname.startsWith('/wishlist') && !isFriends;
   const [showCreate, setShowCreate] = React.useState(false);
 
   return (

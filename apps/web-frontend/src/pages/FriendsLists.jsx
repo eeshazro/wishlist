@@ -26,7 +26,7 @@ export default function FriendsLists({auth}){
                 <div className="item-title">{l.name}</div>
                 <div className="mt-8"><span className="badge">{l.role}</span></div>
                 <div className="mt-12">
-                  <Link className="a-link-normal" to={`/wishlist/${l.id}`}>Open list</Link>
+                  <Link className="a-link-normal" to={`/wishlist/friends/${l.id}`}>Open list</Link>
                 </div>
               </div>
             ))}

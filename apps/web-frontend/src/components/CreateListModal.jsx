@@ -33,15 +33,19 @@ export default function CreateListModal({ open, onClose, auth }) {
     maxHeight: '85vh',
     background: '#fff',
     borderRadius: '10px',
-    padding: '16px',
-    overflow: 'auto',
+    overflow: 'hidden',
     boxShadow: '0 10px 30px rgba(0,0,0,.25)'
   };
   const header = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '12px'
+    padding: '16px',
+    background: '#f7fafa',
+    borderBottom: '1px solid var(--amz-line)'
+  };
+  const content = {
+    padding: '16px'
   };
 
   const create = async ()=>{
@@ -75,19 +79,21 @@ export default function CreateListModal({ open, onClose, auth }) {
           <button className="a-button" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        <div className="mb-12">
-          <label className="a-text-bold" htmlFor="clm_name">List name (required)</label>
-          <input id="clm_name" className="a-input-text" value={name} onChange={e=>setName(e.target.value)} />
-          <div className="a-muted" style={{ marginTop: 6 }}>
-            Use lists to save items for later. All lists are private unless you share them with others.
+        <div style={content}>
+          <div className="mb-12">
+            <label className="a-text-bold" htmlFor="clm_name">List name (required)</label>
+            <input id="clm_name" className="a-input-text" value={name} onChange={e=>setName(e.target.value)} />
+            <div className="a-muted" style={{ marginTop: 6 }}>
+              Use lists to save items for later. All lists are private unless you share them with others.
+            </div>
           </div>
-        </div>
 
-        {error && <div className="a-alert mb-12">Error: {error}</div>}
+          {error && <div className="a-alert mb-12">Error: {error}</div>}
 
-        <div className="row" style={{ justifyContent:'flex-end', gap: 8 }}>
-          <button className="a-button" onClick={onClose}>Cancel</button>
-          <button className="a-button a-button-primary" onClick={create} disabled={busy}>{busy ? 'Creating…' : 'Create'}</button>
+          <div className="row" style={{ justifyContent:'flex-end', gap: 8 }}>
+            <button className="a-button" onClick={onClose}>Cancel</button>
+            <button className="a-button a-button-primary" onClick={create} disabled={busy}>{busy ? 'Creating…' : 'Create'}</button>
+          </div>
         </div>
       </div>
     </div>
