@@ -2,211 +2,331 @@
   {
     "id": 1,
     "title": "Noise-cancelling Headphones",
-    "description": "Over-ear ANC",
+    "description": "Sony WH-1000XM4 Wireless Noise Cancelling Headphones, Over-ear ANC",
     "price": 199.99,
-    "image_url": "https://picsum.photos/seed/anc/300/200"
+    "image_url": "https://picsum.photos/seed/anc/300/200",
+    "retailer": "Sony",
+    "category": "Electronics",
+    "rating": 4.6,
+    "rating_count": 3610
   },
   {
     "id": 2,
     "title": "Kindle Paperwhite",
-    "description": "E-reader 8GB",
+    "description": "Kindle Paperwhite (8GB) - Now with a 6.8 display and thinner borders",
     "price": 129.99,
-    "image_url": "https://picsum.photos/seed/kindle/300/200"
+    "image_url": "https://picsum.photos/seed/kindle/300/200",
+    "retailer": "Amazon.com",
+    "category": "Electronics",
+    "rating": 4.5,
+    "rating_count": 2156
   },
   {
     "id": 3,
     "title": "Mechanical Keyboard",
-    "description": "Hot-swappable",
+    "description": "Logitech G Pro X Mechanical Gaming Keyboard, Hot-swappable",
     "price": 89.99,
-    "image_url": "https://picsum.photos/seed/kb/300/200"
+    "image_url": "https://picsum.photos/seed/kb/300/200",
+    "retailer": "Logitech",
+    "category": "Electronics",
+    "rating": 4.3,
+    "rating_count": 1247
   },
   {
     "id": 4,
     "title": "4K Monitor",
-    "description": "27-inch IPS",
+    "description": "Samsung 27-inch Odyssey G7 Gaming Monitor, 4K IPS Display",
     "price": 329.99,
-    "image_url": "https://picsum.photos/seed/monitor/300/200"
+    "image_url": "https://picsum.photos/seed/monitor/300/200",
+    "retailer": "Samsung",
+    "category": "Electronics",
+    "rating": 4.7,
+    "rating_count": 892
   },
   {
     "id": 5,
     "title": "USB-C Dock",
-    "description": "11-in-1 hub",
+    "description": "Anker 11-in-1 USB-C Hub, Thunderbolt 3 Compatible",
     "price": 59.99,
-    "image_url": "https://picsum.photos/seed/dock/300/200"
+    "image_url": "https://picsum.photos/seed/dock/300/200",
+    "retailer": "Anker",
+    "category": "Electronics",
+    "rating": 4.4,
+    "rating_count": 743
   },
   {
     "id": 6,
-    "title": "Product 6",
-    "description": "Sample product",
-    "price": 25.0,
-    "image_url": "https://picsum.photos/seed/p6/300/200"
+    "title": "Dishwasher Pods",
+    "description": "Cascade Platinum Plus Dishwasher Pods, Dishwasher Detergent, Lemon, 57 Count",
+    "price": 21.44,
+    "image_url": "https://picsum.photos/seed/p6/300/200",
+    "retailer": "Cascade",
+    "category": "Health and Beauty",
+    "rating": 4.5,
+    "rating_count": 3610
   },
   {
     "id": 7,
-    "title": "Product 7",
-    "description": "Sample product",
-    "price": 27.5,
-    "image_url": "https://picsum.photos/seed/p7/300/200"
+    "title": "Greek Yogurt",
+    "description": "365 by Whole Foods Market, Greek Yogurt, Plain Nonfat, 32 Ounce",
+    "price": 4.49,
+    "image_url": "https://picsum.photos/seed/p7/300/200",
+    "retailer": "365 by Whole Foods Market",
+    "category": "Grocery",
+    "rating": 4.2,
+    "rating_count": 164
   },
   {
     "id": 8,
-    "title": "Product 8",
-    "description": "Sample product",
-    "price": 30.0,
-    "image_url": "https://picsum.photos/seed/p8/300/200"
+    "title": "Wireless Mouse",
+    "description": "Logitech MX Master 3 Advanced Wireless Mouse",
+    "price": 79.99,
+    "image_url": "https://picsum.photos/seed/p8/300/200",
+    "retailer": "Logitech",
+    "category": "Electronics",
+    "rating": 4.6,
+    "rating_count": 1892
   },
   {
     "id": 9,
-    "title": "Product 9",
-    "description": "Sample product",
-    "price": 32.5,
-    "image_url": "https://picsum.photos/seed/p9/300/200"
+    "title": "Coffee Maker",
+    "description": "Breville BES870XL Barista Express Espresso Machine",
+    "price": 699.95,
+    "image_url": "https://picsum.photos/seed/p9/300/200",
+    "retailer": "Breville",
+    "category": "Home & Kitchen",
+    "rating": 4.8,
+    "rating_count": 4567
   },
   {
     "id": 10,
-    "title": "Product 10",
-    "description": "Sample product",
-    "price": 35.0,
-    "image_url": "https://picsum.photos/seed/p10/300/200"
+    "title": "Running Shoes",
+    "description": "Nike Air Zoom Pegasus 38 Running Shoes",
+    "price": 119.99,
+    "image_url": "https://picsum.photos/seed/p10/300/200",
+    "retailer": "Nike",
+    "category": "Sports & Outdoors",
+    "rating": 4.4,
+    "rating_count": 2156
   },
   {
     "id": 11,
-    "title": "Product 11",
-    "description": "Sample product",
-    "price": 37.5,
-    "image_url": "https://picsum.photos/seed/p11/300/200"
+    "title": "Bluetooth Speaker",
+    "description": "JBL Flip 5 Waterproof Portable Bluetooth Speaker",
+    "price": 89.95,
+    "image_url": "https://picsum.photos/seed/p11/300/200",
+    "retailer": "JBL",
+    "category": "Electronics",
+    "rating": 4.3,
+    "rating_count": 1247
   },
   {
     "id": 12,
-    "title": "Product 12",
-    "description": "Sample product",
-    "price": 40.0,
-    "image_url": "https://picsum.photos/seed/p12/300/200"
+    "title": "Smart Watch",
+    "description": "Apple Watch Series 7 GPS, 41mm Aluminum Case",
+    "price": 399.00,
+    "image_url": "https://picsum.photos/seed/p12/300/200",
+    "retailer": "Apple",
+    "category": "Electronics",
+    "rating": 4.7,
+    "rating_count": 892
   },
   {
     "id": 13,
-    "title": "Product 13",
-    "description": "Sample product",
-    "price": 42.5,
-    "image_url": "https://picsum.photos/seed/p13/300/200"
+    "title": "Laptop Stand",
+    "description": "Rain Design mStand Laptop Stand, Aluminum",
+    "price": 39.95,
+    "image_url": "https://picsum.photos/seed/p13/300/200",
+    "retailer": "Rain Design",
+    "category": "Electronics",
+    "rating": 4.5,
+    "rating_count": 743
   },
   {
     "id": 14,
-    "title": "Product 14",
-    "description": "Sample product",
-    "price": 45.0,
-    "image_url": "https://picsum.photos/seed/p14/300/200"
+    "title": "Desk Lamp",
+    "description": "TaoTronics LED Desk Lamp with Wireless Charger",
+    "price": 49.99,
+    "image_url": "https://picsum.photos/seed/p14/300/200",
+    "retailer": "TaoTronics",
+    "category": "Home & Kitchen",
+    "rating": 4.2,
+    "rating_count": 164
   },
   {
     "id": 15,
-    "title": "Product 15",
-    "description": "Sample product",
-    "price": 47.5,
-    "image_url": "https://picsum.photos/seed/p15/300/200"
+    "title": "Wireless Earbuds",
+    "description": "Samsung Galaxy Buds Pro True Wireless Earbuds",
+    "price": 199.99,
+    "image_url": "https://picsum.photos/seed/p15/300/200",
+    "retailer": "Samsung",
+    "category": "Electronics",
+    "rating": 4.4,
+    "rating_count": 1892
   },
   {
     "id": 16,
-    "title": "Product 16",
-    "description": "Sample product",
-    "price": 50.0,
-    "image_url": "https://picsum.photos/seed/p16/300/200"
+    "title": "Gaming Chair",
+    "description": "Secretlab Omega Gaming Chair, Fabric",
+    "price": 349.00,
+    "image_url": "https://picsum.photos/seed/p16/300/200",
+    "retailer": "Secretlab",
+    "category": "Home & Kitchen",
+    "rating": 4.6,
+    "rating_count": 4567
   },
   {
     "id": 17,
-    "title": "Product 17",
-    "description": "Sample product",
-    "price": 52.5,
-    "image_url": "https://picsum.photos/seed/p17/300/200"
+    "title": "Portable Charger",
+    "description": "Anker PowerCore 10000mAh Portable Charger",
+    "price": 29.99,
+    "image_url": "https://picsum.photos/seed/p17/300/200",
+    "retailer": "Anker",
+    "category": "Electronics",
+    "rating": 4.5,
+    "rating_count": 2156
   },
   {
     "id": 18,
-    "title": "Product 18",
-    "description": "Sample product",
-    "price": 55.0,
-    "image_url": "https://picsum.photos/seed/p18/300/200"
+    "title": "Webcam",
+    "description": "Logitech C920x HD Pro Webcam, Full HD 1080p",
+    "price": 69.99,
+    "image_url": "https://picsum.photos/seed/p18/300/200",
+    "retailer": "Logitech",
+    "category": "Electronics",
+    "rating": 4.3,
+    "rating_count": 1247
   },
   {
     "id": 19,
-    "title": "Product 19",
-    "description": "Sample product",
-    "price": 57.5,
-    "image_url": "https://picsum.photos/seed/p19/300/200"
+    "title": "Tablet Stand",
+    "description": "Lamicall Adjustable Tablet Stand, Aluminum",
+    "price": 19.99,
+    "image_url": "https://picsum.photos/seed/p19/300/200",
+    "retailer": "Lamicall",
+    "category": "Electronics",
+    "rating": 4.4,
+    "rating_count": 892
   },
   {
     "id": 20,
-    "title": "Product 20",
-    "description": "Sample product",
-    "price": 60.0,
-    "image_url": "https://picsum.photos/seed/p20/300/200"
+    "title": "Cable Organizer",
+    "description": "JOTO Cable Management Sleeve, 3ft",
+    "price": 12.99,
+    "image_url": "https://picsum.photos/seed/p20/300/200",
+    "retailer": "JOTO",
+    "category": "Electronics",
+    "rating": 4.2,
+    "rating_count": 743
   },
   {
     "id": 21,
-    "title": "Product 21",
-    "description": "Sample product",
-    "price": 62.5,
-    "image_url": "https://picsum.photos/seed/p21/300/200"
+    "title": "Monitor Arm",
+    "description": "VIVO Single Monitor Desk Mount Stand",
+    "price": 39.99,
+    "image_url": "https://picsum.photos/seed/p21/300/200",
+    "retailer": "VIVO",
+    "category": "Electronics",
+    "rating": 4.5,
+    "rating_count": 164
   },
   {
     "id": 22,
-    "title": "Product 22",
-    "description": "Sample product",
-    "price": 65.0,
-    "image_url": "https://picsum.photos/seed/p22/300/200"
+    "title": "Wireless Keyboard",
+    "description": "Logitech MX Keys Advanced Wireless Illuminated Keyboard",
+    "price": 99.99,
+    "image_url": "https://picsum.photos/seed/p22/300/200",
+    "retailer": "Logitech",
+    "category": "Electronics",
+    "rating": 4.6,
+    "rating_count": 1892
   },
   {
     "id": 23,
-    "title": "Product 23",
-    "description": "Sample product",
-    "price": 67.5,
-    "image_url": "https://picsum.photos/seed/p23/300/200"
+    "title": "USB Hub",
+    "description": "Anker 4-Port USB 3.0 Ultra Slim Data Hub",
+    "price": 15.99,
+    "image_url": "https://picsum.photos/seed/p23/300/200",
+    "retailer": "Anker",
+    "category": "Electronics",
+    "rating": 4.3,
+    "rating_count": 4567
   },
   {
     "id": 24,
-    "title": "Product 24",
-    "description": "Sample product",
-    "price": 70.0,
-    "image_url": "https://picsum.photos/seed/p24/300/200"
+    "title": "Phone Stand",
+    "description": "Lamicall Phone Stand, Aluminum",
+    "price": 9.99,
+    "image_url": "https://picsum.photos/seed/p24/300/200",
+    "retailer": "Lamicall",
+    "category": "Electronics",
+    "rating": 4.4,
+    "rating_count": 2156
   },
   {
     "id": 25,
-    "title": "Product 25",
-    "description": "Sample product",
-    "price": 72.5,
-    "image_url": "https://picsum.photos/seed/p25/300/200"
+    "title": "Bluetooth Adapter",
+    "description": "Avantree DG40 USB Bluetooth Adapter",
+    "price": 24.99,
+    "image_url": "https://picsum.photos/seed/p25/300/200",
+    "retailer": "Avantree",
+    "category": "Electronics",
+    "rating": 4.2,
+    "rating_count": 1247
   },
   {
     "id": 26,
-    "title": "Product 26",
-    "description": "Sample product",
-    "price": 75.0,
-    "image_url": "https://picsum.photos/seed/p26/300/200"
+    "title": "Cable Ties",
+    "description": "VELCRO Brand Reusable Self-Gripping Cable Ties",
+    "price": 8.99,
+    "image_url": "https://picsum.photos/seed/p26/300/200",
+    "retailer": "VELCRO",
+    "category": "Electronics",
+    "rating": 4.5,
+    "rating_count": 892
   },
   {
     "id": 27,
-    "title": "Product 27",
-    "description": "Sample product",
-    "price": 77.5,
-    "image_url": "https://picsum.photos/seed/p27/300/200"
+    "title": "Desk Mat",
+    "description": "Glorious Extended Gaming Mouse Mat",
+    "price": 19.99,
+    "image_url": "https://picsum.photos/seed/p27/300/200",
+    "retailer": "Glorious",
+    "category": "Electronics",
+    "rating": 4.3,
+    "rating_count": 743
   },
   {
     "id": 28,
-    "title": "Product 28",
-    "description": "Sample product",
-    "price": 80.0,
-    "image_url": "https://picsum.photos/seed/p28/300/200"
+    "title": "Monitor Light",
+    "description": "BenQ ScreenBar LED Monitor Light",
+    "price": 99.00,
+    "image_url": "https://picsum.photos/seed/p28/300/200",
+    "retailer": "BenQ",
+    "category": "Electronics",
+    "rating": 4.7,
+    "rating_count": 164
   },
   {
     "id": 29,
-    "title": "Product 29",
-    "description": "Sample product",
-    "price": 82.5,
-    "image_url": "https://picsum.photos/seed/p29/300/200"
+    "title": "Foot Rest",
+    "description": "Mind Reader Adjustable Foot Rest",
+    "price": 29.99,
+    "image_url": "https://picsum.photos/seed/p29/300/200",
+    "retailer": "Mind Reader",
+    "category": "Home & Kitchen",
+    "rating": 4.4,
+    "rating_count": 1892
   },
   {
     "id": 30,
-    "title": "Product 30",
-    "description": "Sample product",
-    "price": 85.0,
-    "image_url": "https://picsum.photos/seed/p30/300/200"
+    "title": "Wrist Rest",
+    "description": "Glorious Gaming Wrist Rest, Memory Foam",
+    "price": 14.99,
+    "image_url": "https://picsum.photos/seed/p30/300/200",
+    "retailer": "Glorious",
+    "category": "Electronics",
+    "rating": 4.6,
+    "rating_count": 4567
   }
 ]

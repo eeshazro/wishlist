@@ -44,7 +44,7 @@ export default function Tabs({auth}){
           <Link to="/wishlist/friends" role="tab" aria-selected={isFriends ? 'true':'false'}>Your Friends</Link>
         </li>
         <div className="a-text-right" style={{marginLeft:'auto', display:'flex', gap:16, alignItems:'center'}}>
-          <button className="a-link-normal" onClick={()=>setShowCreate(true)} aria-haspopup="dialog">Create a List</button>
+          <Link className="a-link-normal" onClick={()=>setShowCreate(true)} aria-haspopup="dialog">Create a List</Link>
           <Link className="a-link-normal" to="https://www.amazon.com/gp/help/customer/display.html?nodeId=897204" target="_blank">List help</Link>
         </div>
       </ul>

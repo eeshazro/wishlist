@@ -53,7 +53,7 @@ export default function AmazonHeader({
             </a>
             <a className="amz-header-account" href="#">
             <span className="amz-header-muted">Hello, {userName}</span>
-            <span className="amz-header-strong">Account &amp; Lists ▾</span>
+            <span className="amz-header-strong">Account &amp; Lists</span>
             </a>
             <a className="amz-header-returns" href="#">
             <span className="amz-header-muted">Returns</span>
@@ -86,7 +86,7 @@ export default function AmazonHeader({
         </div>
     </nav>
 
-    {/* WHITE “LISTS” RAIL */}
+    {/* WHITE "LISTS" RAIL */}
     <div className="amz-header-tertiary">
         <div className="amz-header-container amz-header-row amz-header-tertiary-row">
         <a href="#" className="amz-header-tertiary-link amz-header-tertiary-active">Your Lists</a>

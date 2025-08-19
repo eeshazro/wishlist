@@ -9,7 +9,7 @@ import FriendsLists from './pages/FriendsLists';
 import WishlistView from './pages/WishlistView';
 import InviteAccept from './pages/InviteAccept';
 import AmazonHeader from './components/AmazonHeader';
-
+import AmazonFooter from './components/AmazonFooter';
 
 export default function App(){
   const auth = useAuth();
@@ -17,13 +17,16 @@ export default function App(){
     <>
       <AmazonHeader userName={ 'Eesha'} cartCount={1} />
       <Header auth={auth} />
-      <Routes>
-        <Route path="/" element={<MyLists auth={auth} />} />
-        <Route path="/wishlist" element={<MyLists auth={auth} />} />
-        <Route path="/wishlist/friends" element={<FriendsLists auth={auth} />} />
-        <Route path="/wishlist/:id" element={<WishlistView auth={auth} />} />
-        <Route path="/invite/:token" element={<InviteAccept auth={auth} />} />
-      </Routes>
+      <main style={{ minHeight: 'calc(100vh - 200px)' }}>
+        <Routes>
+          <Route path="/" element={<MyLists auth={auth} />} />
+          <Route path="/wishlist" element={<MyLists auth={auth} />} />
+          <Route path="/wishlist/friends" element={<FriendsLists auth={auth} />} />
+          <Route path="/wishlist/:id" element={<WishlistView auth={auth} />} />
+          <Route path="/invite/:token" element={<InviteAccept auth={auth} />} />
+        </Routes>
+      </main>
+      <AmazonFooter />
     </>
   );
 }
