@@ -1032,7 +1032,7 @@
   justify-content: center;
   align-items: center;
   padding: 16px 0;
-  margin-top: 20px;
+  margin-top: 10px;
   position: relative;
 }
 
@@ -1059,8 +1059,8 @@
 
 /* Collaborator avatars with stacking */
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #eef2f2;
   display: flex;
@@ -1068,8 +1068,8 @@
   justify-content: center;
   font-weight: 700;
   color: var(--amz-muted);
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none;
+  box-shadow: none;
 }
 
 .avatar-stack {
