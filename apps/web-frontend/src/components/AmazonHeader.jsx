@@ -23,6 +23,8 @@ export default function AmazonHeader({
       localStorage.setItem('token', data.accessToken);
       auth.setToken(data.accessToken);
       setShowLoginDropdown(false);
+      // Add page refresh to clear cached data and reload with new user context
+      window.location.reload();
     }
   };
 
