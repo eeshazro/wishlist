@@ -1,6 +1,6 @@
 # Simple Database Entity Relationship Diagram (ERD)
 
-## Amazon Wishlist Database Schema - Before Collaboration Features
+## Amazon Wishlist Database Schema - Before Advanced Collaboration Features
 
 ```mermaid
 erDiagram
@@ -32,10 +32,19 @@ erDiagram
         timestamp created_at
     }
 
+    %% Simple Invitation Schema (View-Only)
+    WISHLIST_INVITE {
+        int id PK
+        int wishlist_id FK
+        varchar token UK
+        timestamp expires_at
+    }
+
     %% Relationships
     USER ||--o{ WISHLIST : "owns"
     USER ||--o{ WISHLIST_ITEM : "adds"
     WISHLIST ||--o{ WISHLIST_ITEM : "contains"
+    WISHLIST ||--o{ WISHLIST_INVITE : "has_invites"
 ```
 
 ## Table Descriptions
@@ -66,31 +75,50 @@ erDiagram
   - `created_at`: Item addition timestamp
   - Unique constraint on (wishlist_id, product_id)
 
+### Simple Invitation Schema
+- **wishlist_invite**: Invitation tokens for sharing wishlists (view-only)
+  - `id`: Primary key, auto-incrementing
+  - `wishlist_id`: Foreign key to wishlist being shared
+  - `token`: Unique invitation token
+  - `expires_at`: Token expiration timestamp
+  - Note: No `access_type` field - all invites are view-only
+
 ## Key Relationships
 
 1. **User → Wishlist**: One-to-many (a user can own multiple wishlists)
 2. **Wishlist → Wishlist Item**: One-to-many (a wishlist can contain multiple items)
 3. **User → Wishlist Item**: One-to-many (a user can add multiple items)
+4. **Wishlist → Wishlist Invite**: One-to-many (a wishlist can have multiple invitation tokens)
 
 ## Simple Workflow
 
 1. User creates an account
 2. User creates wishlists (owned by them)
 3. User adds items to their wishlists
-4. Wishlists can be set to Private or Public
-5. Public wishlists can be viewed via shareable links (no user authentication required)
+4. User can share wishlists in two ways:
+   - **Public**: Anyone with the link can view (no authentication required)
+   - **Private with Invite**: Generate invitation token for view-only access
+5. Invited users can view the wishlist using the token (no account required)
 
 ## What's Missing (Compared to Full Version)
 
-- **No Collaboration Schema**: No `wishlist_invite`, `wishlist_access`, or `wishlist_item_comment` tables
-- **No User-to-User Sharing**: Only public/private visibility, no specific user access control
-- **No Comments System**: No separate comment threads on items
-- **No Invitation System**: No way to invite specific users to collaborate
-- **No Role-Based Access**: No view_only, view_edit, comment_only roles
+- **No User Access Tracking**: No `wishlist_access` table to track who has accepted invites
+- **No Comments System**: No `wishlist_item_comment` table for threaded comments
+- **No Role-Based Access**: No view_edit or comment_only roles - only view-only
+- **No User Authentication for Invites**: Invited users don't need accounts
+- **No Display Names**: No per-wishlist custom names for collaborators
 
 ## Privacy Levels
 
-- **Private**: Only the owner can view and edit
+- **Private**: Only the owner can view and edit, unless shared via invite token
 - **Public**: Anyone with the link can view (read-only access)
 
-This represents the basic wishlist functionality before any collaborative features were implemented. 
+## Invitation System
+
+- Owner generates invitation tokens for private wishlists
+- Tokens have expiration dates
+- Anyone with a valid token can view the wishlist (no account required)
+- All invited access is view-only (no editing, no commenting)
+- No tracking of who has used the tokens
+
+This represents the wishlist functionality with basic invitation sharing but without the advanced collaboration features. 
