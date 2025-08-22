@@ -115,10 +115,10 @@ export default function FriendsLists({auth}){
                   </div>
                   <div className="invite-info">
                     <h2 className="invite-title">
-                      {invite.inviter_name} is inviting you to collaborate on their wishlist "{invite.wishlist_name}"
+                      {invite.inviter_name} is inviting you to view their wishlist "{invite.wishlist_name}"
                     </h2>
                     <p className="invite-description">
-                      You'll be able to view and comment on items in this wishlist.
+                      You'll be able to view items in this wishlist.
                     </p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '300px' }}>
