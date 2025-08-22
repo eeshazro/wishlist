@@ -1,9 +1,6 @@
 import React from 'react';
-import CommentThread from './CommentThread';
 
-export default function AmazonItemCard({ item, auth, wid, canComment, canDelete, onDelete }) {
-  const [commentsExpanded, setCommentsExpanded] = React.useState(false);
-
+export default function AmazonItemCard({ item, auth, wid, canDelete, onDelete }) {
   // Helper function to format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -97,11 +94,6 @@ export default function AmazonItemCard({ item, auth, wid, canComment, canDelete,
     }
   };
 
-  // Handle comments toggle
-  const toggleComments = () => {
-    setCommentsExpanded(!commentsExpanded);
-  };
-
   return (
     <div className="amazon-item-card">
       <div className="amazon-item-content">
@@ -162,17 +154,6 @@ export default function AmazonItemCard({ item, auth, wid, canComment, canDelete,
             )}
           </div>
         </div>
-
-        {/* Collapse/Expand Arrow with Comments text */}
-        <div className="amazon-item-collapse" onClick={toggleComments}>
-          <span className="amazon-comments-text">Comments</span>
-          <span className={`amazon-collapse-icon ${commentsExpanded ? 'expanded' : ''}`}>◀</span>
-        </div>
-      </div>
-
-      {/* Comments Section - Expandable */}
-      <div className={`amazon-item-comments ${commentsExpanded ? 'expanded' : ''}`}>
-        <CommentThread auth={auth} wid={wid} itemId={item.id} canComment={canComment} />
       </div>
     </div>
   );

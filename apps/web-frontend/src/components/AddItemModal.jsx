@@ -34,7 +34,9 @@ export default function AddItemModal({ open, onClose, products = [], onPick }) {
     background: '#fff',
     borderRadius: '10px',
     overflow: 'hidden',
-    boxShadow: '0 10px 30px rgba(0,0,0,.25)'
+    boxShadow: '0 10px 30px rgba(0,0,0,.25)',
+    display: 'flex',
+    flexDirection: 'column'
   };
   const header = {
     display: 'flex',
@@ -42,10 +44,14 @@ export default function AddItemModal({ open, onClose, products = [], onPick }) {
     justifyContent: 'space-between',
     padding: '16px',
     background: '#f7fafa',
-    borderBottom: '1px solid var(--amz-line)'
+    borderBottom: '1px solid var(--amz-line)',
+    flexShrink: 0
   };
   const content = {
-    padding: '16px'
+    padding: '16px',
+    overflowY: 'auto',
+    flex: 1,
+    minHeight: 0
   };
 
   return (

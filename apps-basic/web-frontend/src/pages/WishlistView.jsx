@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { API } from '../lib/api';
 import LeftNav from '../components/LeftNav';
 import ShareButton from '../components/ShareButton';
-import CommentThread from '../components/CommentThread';
 import AddItemModal from '../components/AddItemModal';
 import InviteModal from '../components/InviteModal';
 import ManagePeopleModal from '../components/ManagePeopleModal';
@@ -264,7 +263,6 @@ export default function WishlistView({auth}){
                 item={it}
                 auth={auth}
                 wid={id}
-                canComment={false}
                 canDelete={canDelete}
                 onDelete={deleteItem}
               />
