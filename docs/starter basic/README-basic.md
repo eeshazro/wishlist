@@ -11,7 +11,7 @@ Welcome to the comprehensive documentation for the **Basic Version** of the Amaz
 - **[04-collaboration-service-basic.md](04-collaboration-service-basic.md)** - Basic sharing and invitations (view-only)
 
 ### 🗄️ Database Documentation
-- **[06-database-erd-basic.md](../06-database-erd-basic.md)** - Simplified database schema (basic version)
+- **[05-database-erd-basic.md](05-database-erd-basic.md)** - Simplified database schema (basic version)
 
 ## 🏛️ System Architecture
 
@@ -101,20 +101,20 @@ The application uses **PostgreSQL** with **schema separation**:
 
 ### Prerequisites
 - Node.js (v16+)
-- PostgreSQL (v12+)
+- PostgreSQL (v15+)
 - Docker (for containerized deployment)
 
 ### Quick Start
 1. Clone the repository
 2. Set up PostgreSQL database
-3. Run database migrations (`db/init/`)
-4. Start services with Docker Compose (`ops/docker-compose.yml`)
+3. Run database migrations (`db-basic/init/`)
+4. Start services with Docker Compose (`ops-basic/docker-compose.yml`)
 5. Access the application at `http://localhost:5173`
 
 ### Environment Variables
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/wishlist_db
+DATABASE_URL=postgresql://wishlist_user:wishlist_pass@localhost:5432/wishlist_db
 
 # JWT
 JWT_SECRET=your_jwt_secret_here
@@ -135,7 +135,8 @@ COLLAB_SVC_URL=http://collaboration-service:3003
 ### Protected Endpoints
 - `GET /api/me` - Current user profile
 - `GET /api/wishlists/mine` - User's wishlists
-- `GET /api/wishlists/:id` - Specific wishlist
+- `GET /api/wishlists/friends` - Wishlists shared with user
+- `GET /api/wishlists/:id` - Specific wishlist with items and role
 - `POST /api/wishlists` - Create wishlist
 - `POST /api/wishlists/:id/items` - Add item
 - `DELETE /api/wishlists/:id/items/:itemId` - Remove item
@@ -143,7 +144,8 @@ COLLAB_SVC_URL=http://collaboration-service:3003
 ### Collaboration Endpoints (Basic)
 - `GET /api/wishlists/:id/access` - List collaborators (owner only)
 - `DELETE /api/wishlists/:id/access/:userId` - Remove collaborator (owner only)
-- `POST /api/wishlists/:id/invites` - Create invitation (owner only)
+- `PUT /api/wishlists/:id/access/:userId` - Update display name (owner only)
+- `POST /api/wishlists/:id/invites` - Create invitation (view-only only)
 - `POST /api/invites/:token/accept` - Accept invitation
 
 ## 🔧 Development
@@ -151,15 +153,15 @@ COLLAB_SVC_URL=http://collaboration-service:3003
 ### Code Structure
 ```
 amazon-collab-wishlist/
-├── apps/
+├── apps-basic/
 │   ├── api-gateway/          # API Gateway service
 │   ├── user-service/         # User management
 │   ├── wishlist-service/     # Wishlist operations
 │   ├── collaboration-service/ # Basic collaboration features
-│   └── web-frontend/         # React frontend
-├── db/
+│   └── web-frontend/         # React frontend with Vite
+├── db-basic/
 │   └── init/                 # Database migrations
-├── ops/
+├── ops-basic/
 │   └── docker-compose.yml    # Deployment configuration
 └── docs/                     # This documentation
 ```
@@ -224,13 +226,13 @@ amazon-collab-wishlist/
 ### Docker Deployment
 ```bash
 # Build and start all services
-docker-compose -f ops/docker-compose.yml up -d
+docker-compose -f ops-basic/docker-compose.yml up -d
 
 # View logs
-docker-compose -f ops/docker-compose.yml logs -f
+docker-compose -f ops-basic/docker-compose.yml logs -f
 
 # Stop services
-docker-compose -f ops/docker-compose.yml down
+docker-compose -f ops-basic/docker-compose.yml down
 ```
 
 ### Production Considerations
@@ -277,17 +279,26 @@ docker-compose -f ops/docker-compose.yml down
 - No comment functionality
 - No comment-related database tables
 - No comment enrichment in responses
+- No `CommentThread` component in frontend
 
 ### Role-Based Access Control
 - No role management endpoints
 - Simplified roles: only 'owner' and 'view_only'
 - No granular permission control
 - No role specification during invitations
+- No PATCH endpoint for role updates
 
 ### Advanced Invitation Features
 - No `access_type` field in invitations
 - All invitations are view-only
 - No role selection during acceptance
+- No advanced invitation options
+
+### Frontend Features
+- No comment UI components
+- No role management interface
+- No comment threads on items
+- Simplified item cards without comment sections
 
 ## 🔄 Migration Path to Full Version
 
@@ -297,16 +308,19 @@ To upgrade from basic to full version:
    - Create `wishlist_item_comment` table
    - Add comment endpoints to collaboration service
    - Add comment enrichment to API gateway
+   - Add `CommentThread` component to frontend
 
 2. **Add Role-Based Access Control**:
-   - Add role management endpoints
+   - Add role management endpoints (PATCH)
    - Add `access_type` field to invitations
    - Implement permission validation for different roles
+   - Add role management UI components
 
 3. **Enhance Collaboration Features**:
    - Add comment permission checking
    - Add role update functionality
    - Add advanced invitation options
+   - Add user enrichment for comments
 
 ## 📄 License
 
@@ -329,4 +343,18 @@ This basic version is designed to help developers learn:
 5. **Service Integration** - How services communicate and share data
 6. **Basic Collaboration** - Simple sharing and invitation systems
 
-The basic version provides a solid foundation that can be extended with advanced features as developers become more comfortable with the architecture. 
+The basic version provides a solid foundation that can be extended with advanced features as developers become more comfortable with the architecture.
+
+## 🎯 Key Features
+
+### Basic Collaboration System
+- **Simple Sharing** - View-only access to wishlists
+- **Invitation System** - Basic invitation links with expiration
+- **Access Control** - Simple owner vs collaborator permissions
+- **Display Names** - Custom names for collaborators in wishlists
+
+### Frontend Features
+- **Clean Item Cards** - Simple product display without comments
+- **Basic Sharing** - Invitation link generation
+- **User Management** - Simple collaborator management
+- **Responsive Design** - Amazon-style UI components 

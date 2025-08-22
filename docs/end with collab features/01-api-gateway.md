@@ -53,9 +53,40 @@ function auth(req,res,next){
 
 ### HTTP Helper Functions
 ```javascript
-async function jget(url, opts = {}) { /* ... */ }
-async function jpost(url, body, opts = {}) { /* ... */ }
-async function jdel(url, opts = {}) { /* ... */ }
+async function jget(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jpost(url, body, opts = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jdel(url, opts = {}) {
+  const r = await fetch(url, { method: 'DELETE', headers: (opts.headers || {}) });
+  if (!r.ok && r.status !== 204) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return true;
+}
 ```
 
 These wrapper functions:
@@ -92,7 +123,7 @@ These wrapper functions:
 - `GET /api/wishlists/:id/access` - List collaborators (owner only)
 - `DELETE /api/wishlists/:id/access/:userId` - Remove collaborator (owner only)
 - `PATCH /api/wishlists/:id/access/:userId` - Update collaborator role (owner only)
-- `POST /api/wishlists/:id/invites` - Create invitation (owner only)
+- `POST /api/wishlists/:id/invites` - Create invitation with access type (owner only)
 - `GET /api/invites/:token` - Get invite details (public)
 - `POST /api/invites/:token/accept` - Accept invitation
 
@@ -131,6 +162,7 @@ app.get('/api/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
   }
 
   // 5. Combine and return enriched data
+  const safeComments = (comments || []).filter(c => c && typeof c === 'object');
   res.json(safeComments.map(c => ({
     ...c,
     user: byId[c.user_id] || { id: c.user_id, public_name: `User ${c.user_id}`, icon_url: null }
@@ -160,6 +192,39 @@ app.get('/api/wishlists/:id', wrap(async (req,res)=>{
   
   // 5. Return combined response
   res.json({ wishlist: w, items: outItems, role });
+}));
+```
+
+### Example: Access List with User Enrichment
+```javascript
+app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
+  const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
+  if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
+
+  const access = await jget(`${COLLAB_URL}/wishlists/${req.params.id}/access`, { headers: { 'x-owner-id': req.user.id } });
+
+  // Enrich with user directory names/icons
+  const ids = Array.from(new Set([w.owner_id, ...access.map(a => a.user_id)]));
+  let users = [];
+  try {
+    if (ids.length) {
+      const r = await jget(`${USER_URL}/users?ids=${ids.join(',')}`);
+      users = Array.isArray(r) ? r : (Array.isArray(r?.rows) ? r.rows : []);
+    }
+  } catch (e) {
+    console.warn('User enrichment failed in access route:', e.message);
+  }
+  const byId = {};
+  for (const u of users) if (u && typeof u.id !== 'undefined') byId[u.id] = u;
+
+  const out = [
+    { user_id: w.owner_id, role: 'owner', display_name: null, user: byId[w.owner_id] || { id: w.owner_id, public_name: `User ${w.owner_id}`, icon_url: null } },
+    ...access.map(a => ({
+      ...a,
+      user: byId[a.user_id] || { id: a.user_id, public_name: `User ${a.user_id}`, icon_url: null }
+    }))
+  ];
+  res.json(out);
 }));
 ```
 
@@ -230,4 +295,23 @@ This pattern allows the frontend to get all the data it needs in a single reques
 
 ## 📊 Health Check
 
-- `GET /health` - Returns service status and name 
+- `GET /health` - Returns service status and name
+
+## 🎯 Advanced Features
+
+### Role-Based Access Control
+The gateway supports granular role management:
+- **owner**: Full access to wishlist and management
+- **view_only**: Can view items and comments
+- **view_edit**: Can view, edit items, and comment
+- **comment_only**: Can view items and add comments
+
+### Invitation System
+- Supports different access types during invitation creation
+- Automatic role assignment based on invitation type
+- Graceful handling of expired or invalid invitations
+
+### User Enrichment
+- Automatically enriches comments with user profile information
+- Provides fallback user objects when enrichment fails
+- Maintains consistent user data across all responses 

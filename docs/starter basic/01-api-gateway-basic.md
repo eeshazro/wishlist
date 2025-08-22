@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API Gateway (`apps/api-gateway/server.js`) serves as the **central entry point** for all client requests in the Amazon collaborative wishlist application. This basic version implements a **reverse proxy pattern** that routes requests to appropriate backend microservices, combines responses, and handles authentication - without advanced collaboration features like comments and role-based access control.
+The API Gateway (`apps-basic/api-gateway/server.js`) serves as the **central entry point** for all client requests in the Amazon collaborative wishlist application (Basic Version). It implements a **reverse proxy pattern** that routes requests to appropriate backend microservices, combines responses, and handles authentication.
 
 ## 🏗️ Architecture Pattern
 
@@ -25,7 +25,7 @@ const COLLAB_URL = process.env.COLLAB_SVC_URL || 'http://collaboration-service:3
 The gateway connects to three microservices:
 - **User Service** (Port 3001): Handles user authentication and profiles
 - **Wishlist Service** (Port 3002): Manages wishlists and items
-- **Collaboration Service** (Port 3003): Handles basic sharing and invites (view-only)
+- **Collaboration Service** (Port 3003): Handles basic sharing and invitations
 
 ### Authentication Middleware
 ```javascript
@@ -53,9 +53,40 @@ function auth(req,res,next){
 
 ### HTTP Helper Functions
 ```javascript
-async function jget(url, opts = {}) { /* ... */ }
-async function jpost(url, body, opts = {}) { /* ... */ }
-async function jdel(url, opts = {}) { /* ... */ }
+async function jget(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jpost(url, body, opts = {}) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return r.json();
+}
+async function jdel(url, opts = {}) {
+  const r = await fetch(url, { method: 'DELETE', headers: (opts.headers || {}) });
+  if (!r.ok && r.status !== 204) {
+    const t = await r.text();
+    const e = new Error(t || r.statusText);
+    e.status = r.status;
+    throw e;
+  }
+  return true;
+}
 ```
 
 These wrapper functions:
@@ -88,10 +119,11 @@ These wrapper functions:
 - `POST /api/wishlists/:id/items` - Add item to wishlist
 - `DELETE /api/wishlists/:id/items/:itemId` - Remove item from wishlist
 
-#### Basic Collaboration & Sharing
+#### Collaboration & Sharing (Basic)
 - `GET /api/wishlists/:id/access` - List collaborators (owner only)
 - `DELETE /api/wishlists/:id/access/:userId` - Remove collaborator (owner only)
-- `POST /api/wishlists/:id/invites` - Create invitation (owner only)
+- `PUT /api/wishlists/:id/access/:userId` - Update display name (owner only)
+- `POST /api/wishlists/:id/invites` - Create invitation (view-only only)
 - `GET /api/invites/:token` - Get invite details (public)
 - `POST /api/invites/:token/accept` - Accept invitation
 
@@ -111,12 +143,12 @@ app.get('/api/wishlists/:id', wrap(async (req,res)=>{
   // 3. Enrich items with product information from local JSON
   const outItems = items.map(it=>({ ...it, product: products.find(p=>p.id==it.product_id) }));
   
-  // 4. Determine user's role (simplified - only owner or viewer)
+  // 4. Determine user's role
   let role = 'owner';
   if (w.owner_id !== req.user.id){
     const access = await jget(`${COLLAB_URL}/access/mine`, { headers: { 'x-user-id': req.user.id } });
     const me = access.find(a=>a.wishlist_id == w.id);
-    role = me ? 'viewer' : 'none';
+    role = me ? me.role : 'none';
   }
   
   // 5. Return combined response
@@ -124,7 +156,7 @@ app.get('/api/wishlists/:id', wrap(async (req,res)=>{
 }));
 ```
 
-### Example: Access List with User Information
+### Example: Access List with User Enrichment
 ```javascript
 app.get('/api/wishlists/:id/access', wrap(async (req,res)=>{
   const w = await jget(`${WISHLIST_URL}/wishlists/${req.params.id}`);
@@ -209,7 +241,7 @@ When a user views a wishlist:
 3. **Gateway** calls wishlist service: `GET /wishlists/123`
 4. **Gateway** calls wishlist service: `GET /wishlists/123/items`
 5. **Gateway** enriches items with product data from local JSON file
-6. **Gateway** calls collaboration service to determine user's role (owner/viewer)
+6. **Gateway** calls collaboration service to determine user's role
 7. **Gateway** returns combined response to frontend
 
 This pattern allows the frontend to get all the data it needs in a single request, even though it comes from multiple backend services!
@@ -226,56 +258,36 @@ This pattern allows the frontend to get all the data it needs in a single reques
 
 - `GET /health` - Returns service status and name
 
+## 🎯 Basic Version Features
+
+### Simple Access Control
+The basic version supports simplified access control:
+- **owner**: Full access to wishlist and management
+- **view_only**: Can view items only
+
+### Basic Invitation System
+- All invitations are view-only
+- No role selection during invitation creation
+- Simple invitation acceptance process
+
+### User Enrichment
+- Automatically enriches access lists with user profile information
+- Provides fallback user objects when enrichment fails
+- Maintains consistent user data across responses
+
 ## ❌ Features NOT Included in Basic Version
 
 ### Comments System
-- No comment endpoints (`/api/wishlists/:id/items/:itemId/comments`)
-- No comment enrichment in wishlist responses
-- No comment-related data aggregation
+- No comment endpoints
+- No comment functionality
+- No comment enrichment in responses
 
 ### Role-Based Access Control
-- No role management endpoints (`PATCH /api/wishlists/:id/access/:userId`)
-- Simplified roles: only 'owner' and 'viewer' (no 'view_edit', 'comment_only')
+- No role management endpoints (PATCH)
+- Simplified roles: only 'owner' and 'view_only'
 - No granular permission control
 
 ### Advanced Invitation Features
 - No `access_type` field in invitations
 - All invitations are view-only
-- No role specification during invitation acceptance
-
-## 🔄 Migration Path to Full Version
-
-To upgrade from basic to full version:
-
-1. **Add Comment Endpoints**:
-   ```javascript
-   app.get('/api/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
-     // Get comments from collaboration service
-     // Enrich with user information
-     // Return enriched comments
-   }));
-   
-   app.post('/api/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
-     // Validate user permissions
-     // Create comment in collaboration service
-     // Return created comment
-   }));
-   ```
-
-2. **Add Role Management**:
-   ```javascript
-   app.patch('/api/wishlists/:id/access/:userId', wrap(async (req,res)=>{
-     // Update collaborator role
-     // Validate role permissions
-     // Return updated access information
-   }));
-   ```
-
-3. **Enhance Invitation System**:
-   ```javascript
-   // Add access_type support to invitation creation
-   // Add role selection during invitation acceptance
-   // Add permission validation for different roles
-   ```
-
-This basic version provides a solid foundation that can be extended with advanced collaboration features as needed. 
+- No role specification during invitations 

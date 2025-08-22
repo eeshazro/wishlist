@@ -2,16 +2,15 @@
 
 ## Overview
 
-The Collaboration Service (`apps/collaboration-service/server.js`) is responsible for **basic sharing and invitation management** in the Amazon collaborative wishlist application. This basic version handles invitation creation, acceptance, and access tracking - without advanced features like comments and role-based access control.
+The Collaboration Service (`apps-basic/collaboration-service/server.js`) is responsible for **basic sharing and invitations** in the Amazon collaborative wishlist application (Basic Version). It handles simple wishlist sharing with view-only access, invitation management, and basic access control.
 
 ## 🏗️ Architecture Pattern
 
 This service follows a **basic collaboration pattern** where:
-- Manages wishlist sharing and access control
+- Manages wishlist sharing with view-only access
 - Handles invitation creation and acceptance
-- Provides simple view-only access control
-- Tracks who has access to shared wishlists
-- Integrates with other services for permission validation
+- Provides simple access control (owner vs viewer)
+- Integrates with other services for ownership validation
 
 ## 🔧 Key Components
 
@@ -57,11 +56,12 @@ process.on('uncaughtException', (err) => {
 - `GET /access/mine` - Get current user's access to wishlists
 - `GET /wishlists/:id/access` - List collaborators (owner only)
 - `DELETE /wishlists/:id/access/:userId` - Remove collaborator (owner only)
+- `PUT /wishlists/:id/access/:userId` - Update display name (owner only)
 
 ### Invitation Management
-- `POST /wishlists/:id/invites` - Create invitation (owner only)
-- `GET /invites/:token` - Get invite details (public)
-- `POST /invites/:token/accept` - Accept invitation
+- `POST /wishlists/:id/invites` - Create invitation (view-only only)
+- `GET /invites/:token` - Get invite details with enrichment (public)
+- `POST /invites/:token/accept` - Accept invitation (view-only only)
 
 ## 🔐 Access Control Operations
 
@@ -76,7 +76,7 @@ app.get('/access/mine', wrap(async (req,res)=>{
 
 **Features:**
 - Returns all wishlists the current user has access to
-- Includes role information for each wishlist (always 'view_only')
+- Includes role information for each wishlist (always 'view_only' in basic version)
 - Used by API gateway to determine user permissions
 
 ### List Collaborators (Owner Only)
@@ -84,8 +84,10 @@ app.get('/access/mine', wrap(async (req,res)=>{
 app.get('/wishlists/:id/access', wrap(async (req,res)=>{
   const wid = parseInt(req.params.id,10);
   const ownerId = parseInt(req.headers['x-owner-id']||'0',10);
+  console.log('[COLLAB] GET /wishlists/:id/access', { wid, ownerId });
   if(!ownerId) return res.status(403).json({error:'owner required'});
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_access WHERE wishlist_id=$1',[wid]);
+  console.log('[COLLAB] access rows', rows);
   res.json(rows);
 }));
 ```
@@ -105,9 +107,34 @@ app.delete('/wishlists/:id/access/:userId', wrap(async (req,res)=>{
 
 Removes a user's access to a wishlist.
 
+### Update Display Name
+```javascript
+app.put('/wishlists/:id/access/:userId', wrap(async (req,res)=>{
+  const wid = parseInt(req.params.id,10);
+  const targetUserId = parseInt(req.params.userId,10);
+  const ownerId = parseInt(req.headers['x-owner-id']||'0',10);
+  const displayName = (req.body.display_name || '').trim() || null;
+
+  if(!ownerId) return res.status(403).json({error:'owner required'});
+
+  await pool.query('UPDATE "collab".wishlist_access SET display_name=$1 WHERE wishlist_id=$2 AND user_id=$3', [displayName, wid, targetUserId]);
+  const { rows } = await pool.query(
+    'SELECT wishlist_id, user_id, role, invited_by, invited_at, display_name FROM "collab".wishlist_access WHERE wishlist_id=$1 AND user_id=$2',
+    [wid, targetUserId]
+  );
+  if (!rows[0]) return res.status(404).json({error:'not found'});
+  res.json(rows[0]);
+}));
+```
+
+**Features:**
+- Allows owners to update collaborator display names
+- Returns updated access information
+- No role changes allowed in basic version
+
 ## 📧 Invitation Management
 
-### Create Invitation
+### Create Invitation (View-Only Only)
 ```javascript
 app.post('/wishlists/:id/invites', wrap(async (req,res)=>{
   const wid = parseInt(req.params.id,10);
@@ -128,39 +155,75 @@ app.post('/wishlists/:id/invites', wrap(async (req,res)=>{
 - All invitations are view-only (no access_type field)
 - Returns token for sharing
 
-### Get Invitation Details
+### Get Invitation Details (with Enrichment)
 ```javascript
 app.get('/invites/:token', wrap(async (req,res)=>{
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
-  res.json(rows[0]);
+  
+  const invite = rows[0];
+  const wid = invite.wishlist_id;
+  
+  // Get wishlist details
+  let wishlist = null;
+  try {
+    const wishlistRes = await fetch(`${WISHLIST_SVC_URL}/wishlists/${wid}`);
+    if (wishlistRes.ok) {
+      wishlist = await wishlistRes.json();
+    }
+  } catch (e) {
+    console.error('Failed to fetch wishlist details:', e);
+  }
+  
+  // Get inviter details (wishlist owner)
+  let inviter = null;
+  if (wishlist) {
+    try {
+      const userRes = await fetch(`${process.env.USER_SVC_URL || 'http://user-service:3001'}/users/${wishlist.owner_id}`);
+      if (userRes.ok) {
+        inviter = await userRes.json();
+      }
+    } catch (e) {
+      console.error('Failed to fetch inviter details:', e);
+    }
+  }
+  
+  res.json({
+    ...invite,
+    wishlist_name: wishlist?.name || 'Unknown Wishlist',
+    inviter_name: inviter?.public_name || `User ${wishlist?.owner_id || 'Unknown'}`
+  });
 }));
 ```
 
 **Features:**
 - Public endpoint (no authentication required)
 - Validates token and expiration
-- Returns invitation details for preview
+- Enriches invitation with wishlist and inviter details
+- Graceful degradation if enrichment fails
 
-### Accept Invitation
+### Accept Invitation (View-Only Only)
 ```javascript
 app.post('/invites/:token/accept', wrap(async (req,res)=>{
   const userId = uid(req);
   const displayName = (req.body.display_name || '').trim() || null;
+  console.log('[COLLAB] POST /invites/:token/accept', { token: req.params.token, userId, displayName });
 
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
   const wid = rows[0].wishlist_id;
+  const role = 'view_only'; // All invites are view-only in basic version
 
   await pool.query(
     `INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by, display_name)
      VALUES ($1,$2,$3,$4,$5)
      ON CONFLICT (wishlist_id, user_id)
      DO UPDATE SET role=EXCLUDED.role, display_name=COALESCE(EXCLUDED.display_name, "collab".wishlist_access.display_name)`,
-    [wid, userId, 'view_only', userId, displayName]
+    [wid, userId, role, userId, displayName]
   );
 
-  res.json({ ok:true, wishlist_id: wid, role: 'view_only', display_name: displayName });
+  console.log('[COLLAB] accepted invite -> access upserted', { wid, userId, role, displayName });
+  res.json({ ok:true, wishlist_id: wid, role, display_name: displayName });
 }));
 ```
 
@@ -176,135 +239,46 @@ app.post('/invites/:token/accept', wrap(async (req,res)=>{
 ```sql
 CREATE TABLE "collab".wishlist_invite (
     id SERIAL PRIMARY KEY,
-    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id),
-    token VARCHAR(255) UNIQUE NOT NULL,
-    expires_at TIMESTAMP NOT NULL
+    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-**Purpose**: Manages invitation tokens for sharing wishlists (view-only access).
-
 **Fields:**
-- `id`: Primary key, auto-incrementing invite identifier
-- `wishlist_id`: Foreign key to wishlist being shared (required)
-- `token`: Unique invitation token for sharing (required, unique)
-- `expires_at`: Token expiration timestamp (required)
-- **Note**: No `access_type` field - all invites are view-only
-
-**Constraints:**
-- Foreign key constraint on `wishlist_id` references `wishlist.wishlist(id)`
-- Unique constraint on `token`
-- NOT NULL constraints on all fields
-
-**Indexes:**
-- Primary key on `id`
-- Unique index on `token` for fast token lookups
-- Index on `wishlist_id` for wishlist-specific queries
-- Index on `expires_at` for cleanup operations
+- `id`: Primary key, auto-incrementing
+- `wishlist_id`: Foreign key to wishlist being shared
+- `token`: Unique invitation token
+- `expires_at`: Token expiration timestamp
+- `created_at`: Invitation creation timestamp
 
 ### Wishlist Access Table (`collab.wishlist_access`)
 ```sql
 CREATE TABLE "collab".wishlist_access (
-    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id),
-    user_id INTEGER NOT NULL REFERENCES "user".user(id),
-    role VARCHAR(50) NOT NULL,
-    invited_by INTEGER NOT NULL REFERENCES "user".user(id),
+    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES "user".user(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL DEFAULT 'view_only' CHECK (role IN ('view_only')),
+    invited_by INTEGER REFERENCES "user".user(id) ON DELETE SET NULL,
     invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     display_name VARCHAR(255),
     PRIMARY KEY (wishlist_id, user_id)
 );
 ```
 
-**Purpose**: Tracks who has access to shared wishlists (for Manage People modal).
-
 **Fields:**
-- `wishlist_id`: Composite primary key with user_id, foreign key to wishlist (required)
-- `user_id`: Composite primary key with wishlist_id, foreign key to user (required)
-- `role`: Access role (always 'view_only' in this simple version)
-- `invited_by`: Foreign key to user who sent the invitation (required)
-- `invited_at`: When access was granted (default: current timestamp)
-- `display_name`: Custom name for this user in this wishlist (optional)
-
-**Constraints:**
-- Composite primary key on `(wishlist_id, user_id)`
-- Foreign key constraint on `wishlist_id` references `wishlist.wishlist(id)`
-- Foreign key constraint on `user_id` references `user.user(id)`
-- Foreign key constraint on `invited_by` references `user.user(id)`
-- NOT NULL constraints on `wishlist_id`, `user_id`, `role`, `invited_by`
-
-**Indexes:**
-- Composite primary key on `(wishlist_id, user_id)`
-- Index on `user_id` for user access queries
-- Index on `invited_by` for invitation tracking
-
-## 🔗 Key Relationships
-
-### One-to-Many Relationships
-1. **User → Wishlist Access**: A user can have access to multiple wishlists
-2. **Wishlist → Wishlist Invite**: A wishlist can have multiple invitation tokens
-3. **Wishlist → Wishlist Access**: A wishlist can be shared with multiple users
-
-### Many-to-Many Relationships
-1. **User ↔ Wishlist**: Through `wishlist_access` table (collaboration)
-
-## 🔐 Access Control Flow
-
-### 1. Wishlist Creation
-```sql
--- User creates a wishlist (becomes owner)
-INSERT INTO "wishlist".wishlist (name, owner_id, privacy) 
-VALUES ('My Birthday List', 1, 'Private');
-```
-
-### 2. Invitation Generation
-```sql
--- Owner generates invitation token (view-only)
-INSERT INTO "collab".wishlist_invite (wishlist_id, token, expires_at)
-VALUES (1, 'abc123def456', '2024-01-15 12:00:00');
-```
-
-### 3. Invitation Acceptance
-```sql
--- Invited user accepts and gets view-only access
-INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by, display_name)
-VALUES (1, 2, 'view_only', 1, 'Alice');
-```
-
-### 4. Access Levels
-- **view_only**: Can view items (all invited access is view-only)
-- **owner**: Full access to wishlist
-
-## 📊 Data Flow Examples
-
-### Creating a Wishlist with Items
-```sql
--- 1. Create wishlist
-INSERT INTO "wishlist".wishlist (name, owner_id, privacy) 
-VALUES ('Christmas List', 1, 'Private') RETURNING id;
-
--- 2. Add items
-INSERT INTO "wishlist".wishlist_item (product_id, wishlist_id, title, priority, added_by)
-VALUES 
-  (101, 1, 'Wireless Headphones', 1, 1),
-  (102, 1, 'Coffee Maker', 2, 1);
-```
-
-### Sharing a Wishlist
-```sql
--- 1. Create invitation (view-only)
-INSERT INTO "collab".wishlist_invite (wishlist_id, token, expires_at)
-VALUES (1, 'xyz789abc123', '2024-01-20 12:00:00');
-
--- 2. User accepts invitation (gets view-only access)
-INSERT INTO "collab".wishlist_access (wishlist_id, user_id, role, invited_by)
-VALUES (1, 2, 'view_only', 1);
-```
+- `wishlist_id`: Composite primary key with user_id
+- `user_id`: Composite primary key with wishlist_id
+- `role`: Access role (always 'view_only' in basic version)
+- `invited_by`: Foreign key to user who sent the invitation
+- `invited_at`: Invitation acceptance timestamp
+- `display_name`: Custom name for this user in this wishlist
 
 ## 🔄 Integration with Other Services
 
 ### API Gateway Integration
 - Gateway calls collaboration endpoints for access control
-- Gateway enriches access data with user information
+- Gateway enriches access lists with user information
 - Gateway combines collaboration data with wishlist data
 
 ### Wishlist Service Integration
@@ -312,18 +286,18 @@ VALUES (1, 2, 'view_only', 1);
 - Uses wishlist service API to determine ownership
 
 ### User Service Integration
-- User service provides user information for access enrichment
+- User service provides user information for invitation enrichment
 - User IDs are passed via `x-user-id` header
 
 ## 🛡️ Security & Access Control
 
 ### Simple Access Control
-- **view_only**: Can view items (all invited access)
+- **view_only**: Can view items only
 - **owner**: Full access to wishlist
 
 ### Permission Validation
 - Validates ownership for administrative operations
-- Simple access checking (owner or viewer)
+- Simple access control without granular permissions
 - Graceful degradation if services are unavailable
 
 ### Token Security
@@ -336,6 +310,7 @@ VALUES (1, 2, 'view_only', 1);
 - `PORT`: Service port (default: 3003)
 - `DATABASE_URL`: PostgreSQL connection string
 - `WISHLIST_SVC_URL`: Wishlist service URL
+- `USER_SVC_URL`: User service URL (for invitation enrichment)
 
 ## 📊 Health Check
 
@@ -343,25 +318,25 @@ VALUES (1, 2, 'view_only', 1);
 
 ## 🎯 Key Benefits
 
-1. **Basic Collaboration**: Simple sharing and invitation capabilities
-2. **View-Only Access**: Controlled sharing with limited permissions
+1. **Simple Collaboration**: Basic sharing capabilities
+2. **View-Only Access**: Simple permission model
 3. **Invitation System**: Secure sharing with expiration
-4. **Access Tracking**: Manage who has access to wishlists
-5. **Service Integration**: Seamless integration with other services
+4. **Service Integration**: Seamless integration with other services
+5. **Data Enrichment**: Enhanced invitation details with wishlist and user info
 
 ## 🔍 Request Flow Examples
 
 ### Create Invitation Flow
 1. **Frontend** sends `POST /api/wishlists/123/invites` (owner only)
 2. **API Gateway** validates ownership and forwards request
-3. **Collaboration Service** generates unique token
+3. **Collaboration Service** generates unique token (view-only)
 4. **Frontend** receives invitation token for sharing
 
 ### Accept Invitation Flow
 1. **User** clicks invitation link with token
 2. **Frontend** sends `POST /api/invites/token123/accept`
 3. **API Gateway** validates JWT and forwards request
-4. **Collaboration Service** validates token and creates access
+4. **Collaboration Service** validates token and creates view-only access
 5. **User** gains view-only access to wishlist
 
 ## 📈 Performance Considerations
@@ -369,7 +344,7 @@ VALUES (1, 2, 'view_only', 1);
 ### Database Queries
 - Efficient queries with proper indexing
 - Batch operations for access management
-- Optimized invitation validation
+- Optimized access retrieval
 
 ### Caching Opportunities
 - User permissions could be cached
@@ -384,57 +359,19 @@ VALUES (1, 2, 'view_only', 1);
 ## ❌ Features NOT Included in Basic Version
 
 ### Comments System
-- No comment endpoints (`/wishlists/:id/items/:itemId/comments`)
-- No comment permission checking
+- No comment endpoints
+- No comment functionality
 - No comment-related database tables
+- No comment permission checking
 
 ### Role-Based Access Control
-- No role management endpoints (`PATCH /wishlists/:id/access/:userId`)
-- Simplified roles: only 'view_only' for invited users
+- No role management endpoints (PATCH)
+- Simplified roles: only 'owner' and 'view_only'
 - No granular permission control
+- No role specification during invitations
 
 ### Advanced Invitation Features
 - No `access_type` field in invitations
 - All invitations are view-only
-- No role specification during invitation acceptance
-
-## 🔄 Migration Path to Full Version
-
-To upgrade from basic to full version:
-
-1. **Add Comments Table**:
-   ```sql
-   CREATE TABLE "collab".wishlist_item_comment (
-       id SERIAL PRIMARY KEY,
-       wishlist_item_id INTEGER NOT NULL REFERENCES "wishlist".wishlist_item(id),
-       user_id INTEGER NOT NULL REFERENCES "user".user(id),
-       comment_text TEXT NOT NULL,
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
-
-2. **Add Comment Endpoints**:
-   ```javascript
-   app.get('/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
-     // Get comments for item
-   }));
-   
-   app.post('/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
-     // Add comment to item
-   }));
-   ```
-
-3. **Add Role Management**:
-   ```javascript
-   app.patch('/wishlists/:id/access/:userId', wrap(async (req,res)=>{
-     // Update collaborator role
-   }));
-   ```
-
-4. **Enhance Invitation System**:
-   ```sql
-   ALTER TABLE "collab".wishlist_invite 
-   ADD COLUMN access_type VARCHAR(20) NOT NULL DEFAULT 'view_only';
-   ```
-
-This basic version provides a solid foundation that can be extended with advanced collaboration features as needed. 
+- No role selection during acceptance
+- No advanced invitation options 

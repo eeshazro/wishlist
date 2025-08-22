@@ -48,6 +48,17 @@ process.on('uncaughtException', (err) => {
 });
 ```
 
+### Database Migration
+```javascript
+async function ensureMigrations() {
+  await pool.query('ALTER TABLE "collab".wishlist_access ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)');
+  await pool.query('ALTER TABLE "collab".wishlist_invite ADD COLUMN IF NOT EXISTS access_type VARCHAR(20) NOT NULL DEFAULT \'view_only\'');
+  console.log('[COLLAB] Migration ensured: wishlist_access.display_name exists');
+}
+```
+
+Ensures database schema is up to date on service startup.
+
 ## 📡 API Routes
 
 ### Health Check
@@ -60,8 +71,8 @@ process.on('uncaughtException', (err) => {
 - `PATCH /wishlists/:id/access/:userId` - Update collaborator role (owner only)
 
 ### Invitation Management
-- `POST /wishlists/:id/invites` - Create invitation (owner only)
-- `GET /invites/:token` - Get invite details (public)
+- `POST /wishlists/:id/invites` - Create invitation with access type (owner only)
+- `GET /invites/:token` - Get invite details with enrichment (public)
 - `POST /invites/:token/accept` - Accept invitation
 
 ### Comments
@@ -89,8 +100,10 @@ app.get('/access/mine', wrap(async (req,res)=>{
 app.get('/wishlists/:id/access', wrap(async (req,res)=>{
   const wid = parseInt(req.params.id,10);
   const ownerId = parseInt(req.headers['x-owner-id']||'0',10);
+  console.log('[COLLAB] GET /wishlists/:id/access', { wid, ownerId });
   if(!ownerId) return res.status(403).json({error:'owner required'});
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_access WHERE wishlist_id=$1',[wid]);
+  console.log('[COLLAB] access rows', rows);
   res.json(rows);
 }));
 ```
@@ -161,25 +174,59 @@ app.post('/wishlists/:id/invites', wrap(async (req,res)=>{
 - Supports different access types (view_only, view_edit, comment_only)
 - Returns token for sharing
 
-### Get Invitation Details
+### Get Invitation Details (with Enrichment)
 ```javascript
 app.get('/invites/:token', wrap(async (req,res)=>{
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
-  res.json(rows[0]);
+  
+  const invite = rows[0];
+  const wid = invite.wishlist_id;
+  
+  // Get wishlist details
+  let wishlist = null;
+  try {
+    const wishlistRes = await fetch(`${WISHLIST_SVC_URL}/wishlists/${wid}`);
+    if (wishlistRes.ok) {
+      wishlist = await wishlistRes.json();
+    }
+  } catch (e) {
+    console.error('Failed to fetch wishlist details:', e);
+  }
+  
+  // Get inviter details (wishlist owner)
+  let inviter = null;
+  if (wishlist) {
+    try {
+      const userRes = await fetch(`${process.env.USER_SVC_URL || 'http://user-service:3001'}/users/${wishlist.owner_id}`);
+      if (userRes.ok) {
+        inviter = await userRes.json();
+      }
+    } catch (e) {
+      console.error('Failed to fetch inviter details:', e);
+    }
+  }
+  
+  res.json({
+    ...invite,
+    wishlist_name: wishlist?.name || 'Unknown Wishlist',
+    inviter_name: inviter?.public_name || `User ${wishlist?.owner_id || 'Unknown'}`
+  });
 }));
 ```
 
 **Features:**
 - Public endpoint (no authentication required)
 - Validates token and expiration
-- Returns invitation details for preview
+- Enriches invitation with wishlist and inviter details
+- Graceful degradation if enrichment fails
 
 ### Accept Invitation
 ```javascript
 app.post('/invites/:token/accept', wrap(async (req,res)=>{
   const userId = uid(req);
   const displayName = (req.body.display_name || '').trim() || null;
+  console.log('[COLLAB] POST /invites/:token/accept', { token: req.params.token, userId, displayName });
 
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
@@ -194,13 +241,14 @@ app.post('/invites/:token/accept', wrap(async (req,res)=>{
     [wid, userId, role, userId, displayName]
   );
 
+  console.log('[COLLAB] accepted invite -> access upserted', { wid, userId, role, displayName });
   res.json({ ok:true, wishlist_id: wid, role, display_name: displayName });
 }));
 ```
 
 **Features:**
 - Validates invitation token and expiration
-- Creates access record with specified role
+- Creates access record with specified role from invitation
 - Supports custom display names
 - Handles duplicate acceptances gracefully
 
@@ -290,7 +338,7 @@ app.post('/wishlists/:id/items/:itemId/comments', wrap(async (req, res) => {
 ```sql
 CREATE TABLE "collab".wishlist_invite (
     id SERIAL PRIMARY KEY,
-    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id),
+    wishlist_id INTEGER NOT NULL,
     token VARCHAR(255) UNIQUE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     access_type VARCHAR(20) NOT NULL DEFAULT 'view_only'
@@ -307,11 +355,11 @@ CREATE TABLE "collab".wishlist_invite (
 ### Wishlist Access Table (`collab.wishlist_access`)
 ```sql
 CREATE TABLE "collab".wishlist_access (
-    wishlist_id INTEGER NOT NULL REFERENCES "wishlist".wishlist(id),
-    user_id INTEGER NOT NULL REFERENCES "user".user(id),
-    role VARCHAR(50) NOT NULL,
-    invited_by INTEGER NOT NULL REFERENCES "user".user(id),
-    invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    wishlist_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    invited_by INTEGER,
+    invited_at TIMESTAMP DEFAULT NOW(),
     display_name VARCHAR(255),
     PRIMARY KEY (wishlist_id, user_id)
 );
@@ -329,10 +377,10 @@ CREATE TABLE "collab".wishlist_access (
 ```sql
 CREATE TABLE "collab".wishlist_item_comment (
     id SERIAL PRIMARY KEY,
-    wishlist_item_id INTEGER NOT NULL REFERENCES "wishlist".wishlist_item(id),
-    user_id INTEGER NOT NULL REFERENCES "user".user(id),
+    wishlist_item_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     comment_text TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
@@ -355,7 +403,7 @@ CREATE TABLE "collab".wishlist_item_comment (
 - Uses wishlist service API to determine ownership
 
 ### User Service Integration
-- User service provides user information for comment enrichment
+- User service provides user information for invitation enrichment
 - User IDs are passed via `x-user-id` header
 
 ## 🛡️ Security & Access Control
@@ -381,6 +429,7 @@ CREATE TABLE "collab".wishlist_item_comment (
 - `PORT`: Service port (default: 3003)
 - `DATABASE_URL`: PostgreSQL connection string
 - `WISHLIST_SVC_URL`: Wishlist service URL
+- `USER_SVC_URL`: User service URL (for invitation enrichment)
 
 ## 📊 Health Check
 
@@ -390,29 +439,30 @@ CREATE TABLE "collab".wishlist_item_comment (
 
 1. **Collaboration Features**: Rich sharing and commenting capabilities
 2. **Role-Based Access**: Granular permission control
-3. **Invitation System**: Secure sharing with expiration
+3. **Invitation System**: Secure sharing with expiration and access types
 4. **Social Features**: Threaded comments on items
 5. **Service Integration**: Seamless integration with other services
+6. **Data Enrichment**: Enhanced invitation details with wishlist and user info
 
 ## 🔍 Request Flow Examples
 
 ### Create Invitation Flow
-1. **Frontend** sends `POST /api/wishlists/123/invites` (owner only)
+1. **Frontend** sends `POST /api/wishlists/123/invites` with access_type (owner only)
 2. **API Gateway** validates ownership and forwards request
-3. **Collaboration Service** generates unique token
+3. **Collaboration Service** generates unique token with specified access type
 4. **Frontend** receives invitation token for sharing
 
 ### Accept Invitation Flow
 1. **User** clicks invitation link with token
 2. **Frontend** sends `POST /api/invites/token123/accept`
 3. **API Gateway** validates JWT and forwards request
-4. **Collaboration Service** validates token and creates access
+4. **Collaboration Service** validates token and creates access with role from invitation
 5. **User** gains access to wishlist with specified role
 
 ### Add Comment Flow
 1. **Frontend** sends `POST /api/wishlists/123/items/456/comments`
 2. **API Gateway** validates JWT and forwards request
-3. **Collaboration Service** checks user permissions
+3. **Collaboration Service** checks user permissions via wishlist service
 4. **Collaboration Service** creates comment if authorized
 5. **Frontend** receives created comment data
 

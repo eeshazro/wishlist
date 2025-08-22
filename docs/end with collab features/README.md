@@ -12,7 +12,7 @@ Welcome to the comprehensive documentation for the Amazon Collaborative Wishlist
 
 ### 🗄️ Database Documentation
 - **[05-database-erd-full.md](05-database-erd-full.md)** - Complete database schema with all features
-- **[06-database-erd-basic.md](06-database-erd-basic.md)** - Simplified database schema (basic version)
+- **[database_erd.md](database_erd.md)** - Simplified database schema diagram
 
 ## 🏛️ System Architecture
 
@@ -80,8 +80,8 @@ The application uses **PostgreSQL** with **schema separation**:
 - `user.user` - User accounts and profiles
 - `wishlist.wishlist` - Wishlist containers
 - `wishlist.wishlist_item` - Items within wishlists
-- `collab.wishlist_invite` - Invitation tokens
-- `collab.wishlist_access` - User access permissions
+- `collab.wishlist_invite` - Invitation tokens with access types
+- `collab.wishlist_access` - User access permissions with roles
 - `collab.wishlist_item_comment` - Comments on items
 
 ## 🔐 Security & Access Control
@@ -94,7 +94,7 @@ The application uses **PostgreSQL** with **schema separation**:
 ### Authorization
 - **Role-based access control** for wishlist collaboration
 - **Permission levels**: owner, view_only, view_edit, comment_only
-- **Invitation-based sharing** with expiration tokens
+- **Invitation-based sharing** with expiration tokens and access types
 
 ### Privacy Levels
 - **Private** - Only owner and invited users
@@ -105,7 +105,7 @@ The application uses **PostgreSQL** with **schema separation**:
 
 ### Prerequisites
 - Node.js (v16+)
-- PostgreSQL (v12+)
+- PostgreSQL (v16+)
 - Docker (for containerized deployment)
 
 ### Quick Start
@@ -118,7 +118,7 @@ The application uses **PostgreSQL** with **schema separation**:
 ### Environment Variables
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/wishlist_db
+DATABASE_URL=postgresql://app:app@localhost:5432/wishlist
 
 # JWT
 JWT_SECRET=your_jwt_secret_here
@@ -139,11 +139,22 @@ COLLAB_SVC_URL=http://collaboration-service:3003
 ### Protected Endpoints
 - `GET /api/me` - Current user profile
 - `GET /api/wishlists/mine` - User's wishlists
-- `GET /api/wishlists/:id` - Specific wishlist
+- `GET /api/wishlists/friends` - Wishlists shared with user
+- `GET /api/wishlists/:id` - Specific wishlist with items and role
 - `POST /api/wishlists` - Create wishlist
 - `POST /api/wishlists/:id/items` - Add item
-- `GET /api/wishlists/:id/items/:itemId/comments` - Get comments
-- `POST /api/wishlists/:id/items/:itemId/comments` - Add comment
+- `DELETE /api/wishlists/:id/items/:itemId` - Remove item
+
+### Collaboration Endpoints
+- `GET /api/wishlists/:id/access` - List collaborators (owner only)
+- `DELETE /api/wishlists/:id/access/:userId` - Remove collaborator (owner only)
+- `PATCH /api/wishlists/:id/access/:userId` - Update collaborator role (owner only)
+- `POST /api/wishlists/:id/invites` - Create invitation with access type (owner only)
+- `POST /api/invites/:token/accept` - Accept invitation
+
+### Comments Endpoints
+- `GET /api/wishlists/:id/items/:itemId/comments` - Get comments for item
+- `POST /api/wishlists/:id/items/:itemId/comments` - Add comment to item
 
 ## 🔧 Development
 
@@ -155,7 +166,7 @@ amazon-collab-wishlist/
 │   ├── user-service/         # User management
 │   ├── wishlist-service/     # Wishlist operations
 │   ├── collaboration-service/ # Collaboration features
-│   └── web-frontend/         # React frontend
+│   └── web-frontend/         # React frontend with Vite
 ├── db/
 │   └── init/                 # Database migrations
 ├── ops/
@@ -268,6 +279,21 @@ docker-compose -f ops/docker-compose.yml down
 - **Database Connection** - Verify DATABASE_URL
 - **Service Communication** - Check service URLs and ports
 - **CORS Issues** - Verify CORS configuration
+
+## 🎯 Key Features
+
+### Full Collaboration System
+- **Comments on Items** - Users can comment on wishlist items
+- **Role-Based Access Control** - Granular permissions (view_only, view_edit, comment_only)
+- **Advanced Invitations** - Support for different access types during invitation
+- **User Enrichment** - Comments include user profile information
+- **Permission Validation** - Proper checking of user permissions for actions
+
+### Frontend Features
+- **Comment Threads** - Expandable comment sections on items
+- **Role Management** - UI for managing collaborator roles
+- **Advanced Sharing** - Invitation links with access type selection
+- **Real-time Updates** - Dynamic comment loading and display
 
 ## 📄 License
 
