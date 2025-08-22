@@ -308,7 +308,7 @@ app.post('/api/wishlists/:id/invites', wrap(async (req,res)=>{
   if (w.owner_id !== req.user.id) return res.status(403).json({error:'owner required'});
   const body = { access_type: (req.body?.access_type || 'view_only') };
   const data = await jpost(`${COLLAB_URL}/wishlists/${req.params.id}/invites`, body, { headers: { 'content-type':'application/json' } });
-  res.status(201).json({ ...data, inviteLink: `http://localhost:5173/invite/${data.token}` });
+  res.status(201).json({ ...data, inviteLink: `http://localhost:5173/wishlist/friends/invite/${data.token}` });
 }));
 
 app.get('/api/invites/:token', wrap(async (req,res)=>{

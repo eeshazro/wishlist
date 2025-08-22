@@ -94,10 +94,56 @@
   }
   
   /* Left nav lists */
-  .wl-left{
-    border-right:1px solid var(--amz-line);
-    padding-right:16px;
-  }
+.wl-left{
+  border-right:1px solid var(--amz-line);
+  padding-right:16px;
+}
+
+/* Left nav sections */
+.wl-section{
+  margin-bottom: 24px;
+}
+
+.wl-section-title{
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--amz-text);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--amz-line);
+}
+
+.invite-section{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite-link-container{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--amz-bg-soft);
+  border-radius: var(--radius);
+  border: 1px solid var(--amz-line);
+}
+
+.invite-content{
+  padding: 20px 0;
+}
+
+.invite-icon{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.invite-icon svg{
+  filter: drop-shadow(0 2px 4px rgba(255, 164, 28, 0.3));
+}
 
   .wl-right{
     padding-right:2%;
@@ -207,12 +253,32 @@
   .item-price{ color:var(--amz-text); font-weight:600; }
   
   /* Invite widget */
-  .invite-box{
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  }
-  .invite-box input{
-    width:360px;
-  }
+.invite-box{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.invite-box input{
+  width:360px;
+}
+
+/* Invite page styles */
+.invite-info{
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.invite-title{
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--amz-text);
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+.invite-description{
+  font-size: 16px;
+  color: var(--amz-muted);
+  margin: 0;
+  line-height: 1.4;
+}
   
   /* Small helpers */
   .row{ display:flex; align-items:center; gap:8px; }

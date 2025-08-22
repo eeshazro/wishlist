@@ -20,6 +20,14 @@ export default function WishlistView({auth}){
   const [showManage,setShowManage] = React.useState(false);
   const [collabs,setCollabs] = React.useState([]);
 
+  // Clear data when auth token changes (user switches accounts)
+  React.useEffect(() => {
+    setData(null);
+    setMyLists([]);
+    setFriendLists([]);
+    setCollabs([]);
+  }, [auth.token]);
+
   React.useEffect(()=>{
     if(!auth.token) return;
     fetch(`${API}/api/wishlists/${id}`, { headers:{ authorization:`Bearer ${auth.token}` } })

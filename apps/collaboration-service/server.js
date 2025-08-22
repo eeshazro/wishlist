@@ -433,7 +433,39 @@ app.post('/wishlists/:id/invites', wrap(async (req,res)=>{
 app.get('/invites/:token', wrap(async (req,res)=>{
   const { rows } = await pool.query('SELECT * FROM "collab".wishlist_invite WHERE token=$1 AND expires_at > NOW()',[req.params.token]);
   if(!rows[0]) return res.status(404).json({error:'invalid or expired'});
-  res.json(rows[0]);
+  
+  const invite = rows[0];
+  const wid = invite.wishlist_id;
+  
+  // Get wishlist details
+  let wishlist = null;
+  try {
+    const wishlistRes = await fetch(`${WISHLIST_SVC_URL}/wishlists/${wid}`);
+    if (wishlistRes.ok) {
+      wishlist = await wishlistRes.json();
+    }
+  } catch (e) {
+    console.error('Failed to fetch wishlist details:', e);
+  }
+  
+  // Get inviter details (wishlist owner)
+  let inviter = null;
+  if (wishlist) {
+    try {
+      const userRes = await fetch(`${process.env.USER_SVC_URL || 'http://user-service:3001'}/users/${wishlist.owner_id}`);
+      if (userRes.ok) {
+        inviter = await userRes.json();
+      }
+    } catch (e) {
+      console.error('Failed to fetch inviter details:', e);
+    }
+  }
+  
+  res.json({
+    ...invite,
+    wishlist_name: wishlist?.name || 'Unknown Wishlist',
+    inviter_name: inviter?.public_name || `User ${wishlist?.owner_id || 'Unknown'}`
+  });
 }));
 
 // Accept invite

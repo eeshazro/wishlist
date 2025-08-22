@@ -20,11 +20,13 @@ export default function AmazonHeader({
     });
     const data = await r.json();
     if(data.accessToken){
+      // Clear any existing token first
+      localStorage.removeItem('token');
+      // Set the new token
       localStorage.setItem('token', data.accessToken);
       auth.setToken(data.accessToken);
       setShowLoginDropdown(false);
-      // Add page refresh to clear cached data and reload with new user context
-      window.location.reload();
+      // Remove page refresh to let React handle state updates properly
     }
   };
 
