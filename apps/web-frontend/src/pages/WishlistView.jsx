@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { API } from '../lib/api';
 import LeftNav from '../components/LeftNav';
 import ShareButton from '../components/ShareButton';
@@ -11,6 +11,8 @@ import AmazonItemCard from '../components/AmazonItemCard';
 
 export default function WishlistView({auth}){
   const { id } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [data,setData] = React.useState(null);
   const [products,setProducts] = React.useState([]);
   const [myLists,setMyLists] = React.useState([]);
@@ -20,24 +22,107 @@ export default function WishlistView({auth}){
   const [showManage,setShowManage] = React.useState(false);
   const [collabs,setCollabs] = React.useState([]);
 
+  // Track current user to force re-render when user changes
+  const currentUserRef = React.useRef(auth.me?.public_name);
+
   // Clear data when auth token changes (user switches accounts)
   React.useEffect(() => {
-    setData(null);
-    setMyLists([]);
-    setFriendLists([]);
-    setCollabs([]);
-  }, [auth.token]);
+    const newUser = auth.me?.public_name;
+    if (currentUserRef.current !== newUser) {
+      console.log('User changed from', currentUserRef.current, 'to', newUser, '- clearing all state');
+      currentUserRef.current = newUser;
+      
+      // Force clear all state immediately
+      setData(null);
+      setMyLists([]);
+      setFriendLists([]);
+      setCollabs([]);
+      
+      // Force a small delay to ensure state is cleared before any new fetches
+      setTimeout(() => {
+        console.log('State cleared, ready for new user data');
+      }, 0);
+    }
+  }, [auth.token, auth.me?.public_name]);
 
+  // Fetch user's lists and redirect if needed
+  React.useEffect(() => {
+    if (!auth.token || !auth.me?.public_name) return;
+    
+    console.log('Fetching user lists for:', auth.me?.public_name);
+    
+    // Fetch both my lists and friend lists
+    Promise.all([
+      fetch(`${API}/api/wishlists/mine`, { headers:{ authorization:`Bearer ${auth.token}` } }).then(r=>r.json()),
+      fetch(`${API}/api/wishlists/friends`, { headers:{ authorization:`Bearer ${auth.token}` } }).then(r=>r.json())
+    ]).then(([myListsData, friendListsData]) => {
+      setMyLists(myListsData);
+      setFriendLists(friendListsData);
+      
+      // Check if current wishlist is accessible to this user
+      const allAccessibleLists = [...myListsData, ...friendListsData];
+      const currentWishlistAccessible = allAccessibleLists.some(list => list.id == id);
+      
+      // Determine which tab we should be on based on current route
+      const isFriendsRoute = location.pathname.startsWith('/wishlist/friends');
+      
+      // If current wishlist is not accessible, redirect appropriately
+      if (!currentWishlistAccessible) {
+        if (isFriendsRoute && friendListsData.length > 0) {
+          // Stay in friends tab if we're on a friends route and have friend lists
+          console.log('Current wishlist not accessible, redirecting to first friend wishlist:', friendListsData[0].id);
+          navigate(`/wishlist/friends/${friendListsData[0].id}`);
+          return;
+        } else if (!isFriendsRoute && myListsData.length > 0) {
+          // Stay in my lists tab if we're on a my lists route and have own lists
+          console.log('Current wishlist not accessible, redirecting to first own wishlist:', myListsData[0].id);
+          navigate(`/wishlist/${myListsData[0].id}`);
+          return;
+        } else if (myListsData.length > 0) {
+          // Default to my lists if we have any
+          console.log('Redirecting to first own wishlist:', myListsData[0].id);
+          navigate(`/wishlist/${myListsData[0].id}`);
+          return;
+        } else if (friendListsData.length > 0) {
+          // Fall back to friends if no own lists
+          console.log('No own wishlists, redirecting to first friend wishlist:', friendListsData[0].id);
+          navigate(`/wishlist/friends/${friendListsData[0].id}`);
+          return;
+        } else {
+          // If user has no accessible lists at all, redirect to a default view
+          console.log('No accessible wishlists, redirecting to default view');
+          navigate('/wishlist');
+          return;
+        }
+      }
+    });
+  }, [auth.token, auth.me?.public_name, navigate, id, location.pathname]);
+
+  // Fetch wishlist data - only run if we have a user and token
   React.useEffect(()=>{
-    if(!auth.token) return;
+    if(!auth.token || !auth.me?.public_name) return;
+    console.log('Fetching wishlist data for user:', auth.me?.public_name, 'wishlist ID:', id);
+    
     fetch(`${API}/api/wishlists/${id}`, { headers:{ authorization:`Bearer ${auth.token}` } })
-      .then(r=>r.json()).then(setData);
+      .then(r => {
+        if (!r.ok) {
+          // If the user doesn't have access, clear the data
+          console.log('Access denied for wishlist:', id);
+          setData(null);
+          throw new Error('Access denied');
+        }
+        return r.json();
+      })
+      .then(data => {
+        console.log('Received wishlist data for', auth.me?.public_name, ':', data);
+        setData(data);
+      })
+      .catch(err => {
+        console.error('Failed to fetch wishlist:', err);
+        setData(null);
+      });
     fetch(`${API}/products`).then(r=>r.json()).then(setProducts);
-    fetch(`${API}/api/wishlists/mine`, { headers:{ authorization:`Bearer ${auth.token}` } })
-      .then(r=>r.json()).then(setMyLists);
-    fetch(`${API}/api/wishlists/friends`, { headers:{ authorization:`Bearer ${auth.token}` } })
-      .then(r=>r.json()).then(setFriendLists);
-  },[id,auth.token]);
+  },[id,auth.token,auth.me?.public_name]);
 
   React.useEffect(()=>{
     if(!auth.token) return;
@@ -112,7 +197,11 @@ export default function WishlistView({auth}){
       );
     });
 
-  const leftLists = data.role === 'owner' ? myLists : friendLists;
+  // Determine which lists to show in the left sidebar
+  // If we're on a friends route (/wishlist/friends/:id), always show friend lists
+  // Otherwise, show my lists if user is owner, friend lists if not
+  const isFriendsRoute = location.pathname.startsWith('/wishlist/friends');
+  const leftLists = isFriendsRoute ? friendLists : (data?.role === 'owner' ? myLists : friendLists);
 
   return (
     <div className="a-container">
